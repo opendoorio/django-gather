@@ -1,9 +1,12 @@
 Gather
 =======
 
-A Django events app focused on community run and community managed gatherings. 
+A Django events app focused on community-run and community-managed gatherings. 
+
+**See more detailed features description in the [release 0.8 docs](release08.md).**
 
 Major features:
+
 * Events support images, multiple organizers, organizer notes, RSVPs, RSVP
   caps, and private events. 
 * The notion of site-wide event admins who can see and approve pending events,
@@ -20,7 +23,8 @@ Major features:
 
 Warnings
 ===
-This module is not yet entirely independent of modernomad. In particular there
+
+This module is not yet entirely independent of [modernomad](http://github.com/jessykate/modernomad). In particular there
 are certain dependencies on the url structure, template names and awareness of
 reservations which shouldn't show up here. 
 
@@ -29,20 +33,22 @@ Installation
 ===
 
 * add to your requirements.txt file: `git+https://git@github.com/opendoor/django-gather.git`
-* re-run pip `install -r requirements.txt`
+* re-run pip `install -r requirements.txt` (or `pip install --upgrade git+https://git@github.com/opendoor/django-gather.git` when there have been code changes to gather)
 * add `gather` to your settings.py file, under INSTALLED_APPS
-* do the necessary db updates/migrations
+* do the necessary db updates: `./manage.py syncdb` (no need to migrate now because the app is new, for upgrades south migrations might be needed)
 * manually create the event notifications object for each user by iterating through all users and accessing the event_notifications attribute of each user object
 * add users as appropriate to the event_admin group (manual, for now)
 
+
 Dependencies
-===== 
+=== 
 
 * jquery (assumed to be included in your parent project; if not - do it)
 * [timepicker jquery addon](http://trentrichardson.com/examples/timepicker/) - the files should be in included your media directories as appropriate.
 
+
 Expectations
-====== 
+==== 
 
 * expects you to have a block called {% extrajs %} in your base or main
   template file. this block should come at the bottom of the page, after your
