@@ -408,7 +408,6 @@ def event_message(request):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 	
-	return
 	print request.POST
 	recipient = request.POST.get('recipient')
 	sender = request.POST.get('from')
@@ -454,21 +453,22 @@ def event_message(request):
 	body_plain = body_plain + footer
 	body_html = body_html + footer
 
-	# forward the message 
-	mailgun_api_key = settings.MAILGUN_API_KEY
-	list_domain = settings.LIST_DOMAIN
-	resp = requests.post(
-	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
-	    auth=("api", mailgun_api_key),
-	    data={"from": sender,
-	          "to": [recipient, ],
-			  "bcc": bcc_list,
-	          "subject": subject,
-	          "text": body_plain,
-			  "html": body_html
-		}
-	)
-	print resp.text
+	return
+	# send the message 
+#	mailgun_api_key = settings.MAILGUN_API_KEY
+#	list_domain = settings.LIST_DOMAIN
+#	resp = requests.post(
+#	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
+#	    auth=("api", mailgun_api_key),
+#	    data={"from": sender,
+#	          "to": [recipient, ],
+#			  "bcc": bcc_list,
+#	          "subject": subject,
+#	          "text": body_plain,
+#			  "html": body_html
+#		}
+#	)
+#	print resp.text
 
 	return HttpResponse(status=200)
 
