@@ -454,7 +454,6 @@ def event_message(request):
 	body_plain = body_plain + footer
 	body_html = body_html + footer
 
-	return
 	# send the message 
 	mailgun_api_key = settings.MAILGUN_API_KEY
 	list_domain = settings.LIST_DOMAIN
