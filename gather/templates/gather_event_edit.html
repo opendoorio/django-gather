@@ -1,0 +1,35 @@
+{% extends "content-base.html" %}
+{% load static %}
+
+{% block content %}
+
+<form class="form-horizontal" enctype="multipart/form-data" method="post" action="/events/e/{{event_slug}}/edit/">{% csrf_token %}
+	{% include "snippets/event_form_body.html" %}
+	<input id="submit-event" type="submit" class="btn" value="Submit">
+</form>
+
+{% endblock %}
+
+{% block extrajs %}
+<script type="text/javascript" src=" {% static "gather/js/jquery-ui-timepicker-addon.js" %}"></script>
+<script>
+
+	{% include "snippets/js/organizers_autocomplete.js" %}
+
+	$('#id_start').datetimepicker({
+		controlType: 'select'
+	});	
+	$('#id_end').datetimepicker({
+		controlType: 'select'
+	});
+
+	$("#id_title").on('input', function(){
+		console.log("hello");
+		current_title = $("#id_title").val();
+		slugified = current_title.replace(/[\.,-\/#!"\?$%\^&\*;:{}=\-_`~()]/g,"").replace(/ /g,"-");
+		$("#id_slug").val(slugified);
+	});
+
+</script>
+{% endblock %}
+
