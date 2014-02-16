@@ -418,7 +418,8 @@ def event_message(request):
 	# we know that the route is always in the form eventXX, where XX is the
 	# event id.
 	print recipient
-	event_id = int(recipient[5:])
+	alias = recipient.split('@')[0]
+	event_id = int(alias[5:])
 	print event_id
 	event = Event.objects.get(id=event_id)
 
