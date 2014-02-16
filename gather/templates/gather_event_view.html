@@ -1,6 +1,11 @@
 {% extends "content-base.html" %}
 {% block content %}
 
+<meta property="og:image" content="https://{{domain}}{{ MEDIA_URL }}{{ event.image }}"/>
+<meta property="og:title" content="{{event.title|title}}"/>
+<meta property="og:url" content="https://{{domain}}/events/e/{{event.slug}}"/>
+<meta property="og:description" content="{{event.description}}"/>
+
 <div id="event-view-wrapper">
 	<div class="modal fade" id="new-user-modal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-med">
