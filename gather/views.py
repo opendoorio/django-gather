@@ -18,6 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 import json
 from gather import WAIT_FOR_FEEDBACK
+from django.views.decorators.csrf import csrf_exempt
 
 
 def event_guide(request):
@@ -400,6 +401,7 @@ def email_preferences(request, username):
 ############################################
 ########### EMAIL ENDPOINTS ################
 
+@csrf_exempt
 def event_message(request):
 	''' new messages sent to event email addresses are posed to this view '''
 	if not request.method == 'POST':
