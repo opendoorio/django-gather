@@ -403,7 +403,7 @@ def email_preferences(request, username):
 ########### EMAIL ENDPOINTS ################
 
 @csrf_exempt
-def event_message(request):
+def event_message_hide(request):
 	''' new messages sent to event email addresses are posed to this view '''
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
