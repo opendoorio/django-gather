@@ -7,16 +7,16 @@ README = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
-    name='django-comlink',
+    name='django-gather',
     version='0.1',
-    packages=['comlink'],
+    packages=['gather'],
     include_package_data=True,
     license='Affero GPL',  
-    description='community linkages via email and forum-like interfaces',
+    description='community run and community managed events',
     long_description=README,
-	url='https://github.com/opendoor/comlink',
-    author='Jacob Sayles, Trevor F. Smith, Jessy Kate Schingler',
-    author_email='jacob@officenomad.com',
+	url='https://github.com/opendoor/django-gather',
+    author='Jessy Kate Schingler',
+    author_email='jessy@opendoor.io',
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
