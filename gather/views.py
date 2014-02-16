@@ -408,6 +408,7 @@ def event_message(request):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 	
+	return
 	print request.POST
 	recipient = request.POST.get('recipient')
 	sender = request.POST.get('from')
