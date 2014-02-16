@@ -18,6 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 import json
 from gather import WAIT_FOR_FEEDBACK
+import requests
 from django.views.decorators.csrf import csrf_exempt
 
 
@@ -442,10 +443,12 @@ def event_message(request):
 	if subject.find('[Event Discussion') < 0:
 		prefix = '[Event Discussion: %s] ' % event.slug[0:30]
 		subject = prefix + subject
+	print subject
 
 	# add in footer
 	domain = Site.objects.get_current().domain
 	event_url = domain + '/events/%s' % event.slug
+	print event_url
 	footer = '''\n\n-------------------------------------------\nYou are receving this email because you are one of the organizers or an event admin at this location. Visit this event online at %s.'''% event_url
 	body_plain = body_plain + footer
 	body_html = body_html + footer
@@ -464,6 +467,7 @@ def event_message(request):
 			  "html": body_html
 		}
 	)
+	print resp.text
 
 	return HttpResponse(status=200)
 
