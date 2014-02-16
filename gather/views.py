@@ -417,7 +417,9 @@ def event_message(request):
 	# get the event info and make sure the event exists
 	# we know that the route is always in the form eventXX, where XX is the
 	# event id.
+	print recipient
 	event_id = int(recipient[5:])
+	print event_id
 	event = Event.objects.get(id=event_id)
 
 	# find the event organizers and admins
@@ -433,6 +435,8 @@ def event_message(request):
 	for admin in admins:
 		if admin.email not in bcc_list:
 			bcc_list.append(admin.email)
+	print bcc_list
+
 	# prefix subject
 	if subject.find('[Event Discussion') < 0:
 		prefix = '[Event Discussion: %s] ' % event.slug[0:30]
