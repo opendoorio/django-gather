@@ -39,7 +39,7 @@ Dependencies
 ===== 
 
 * jquery (assumed to be included in your parent project; if not - do it)
-* [timepicker jquery addon](http://trentrichardson.com/examples/timepicker/) - the required files are already included in the static dir but may need to be updated over time. 
+* [timepicker jquery addon](http://trentrichardson.com/examples/timepicker/) - the files should be in included your media directories as appropriate.
 
 Expectations
 ====== 
