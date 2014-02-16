@@ -15,19 +15,19 @@
 			<!-- you are either an organizer or an admin -->
 			{% if event.status == 'waiting for approval' %} 
 				{% if user_is_event_admin %}
-					<a id="approve-for-publication" href="">Approve for publication</a> |
+					<a id="approve-for-publication" href="">Approve for publication</a>
 				{% endif %}
 			{% elif event.status == 'ready to publish' %} 
 				{% if user_is_organizer %}
-					<a id="publish-event" href="">Publish this Event</a> to make it live. |
+					<a id="publish-event" href="">Publish this Event</a> to make it live.
 				{% endif %}
 			{% elif event.status == 'seeking feedback' %} 
 				{% if user_is_organizer %}
-					Ready to make it live? <a id="publish-event" href="">Publish this Event</a> |
+					Ready to make it live? <a id="publish-event" href="">Publish this Event</a>
 				{% endif %}
 			{% endif %}
 		
-			<!-- <a href="mailto:{{ event_email }}" title="Send an email to the event organizers and local event admins" class="disabled">Discuss via email</a> -->
+			<!-- | <a href="mailto:{{ event_email }}" title="Send an email to the event organizers and local event admins" class="disabled">Discuss via email</a> -->
 		</div>
 
 	</div>
