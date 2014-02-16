@@ -411,7 +411,10 @@ def event_message(request):
 	
 	print request.POST
 	recipient = request.POST.get('recipient')
-	sender = request.POST.get('from')
+	from_address = request.POST.get('from')
+	sender = request.POST.get('sender')
+	print 'sender is: %s' % sender
+	
 	subject = request.POST.get('subject')
 	body_plain = request.POST.get('body-plain')
 	body_html = request.POST.get('body-html')
@@ -460,7 +463,7 @@ def event_message(request):
 	resp = requests.post(
 	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
 	    auth=("api", mailgun_api_key),
-	    data={"from": sender,
+	    data={"from": from_address,
 	          "to": [recipient, ],
 			  "bcc": bcc_list,
 	          "subject": subject,
