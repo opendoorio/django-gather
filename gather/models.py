@@ -109,7 +109,7 @@ def create_route(route_name, route_pattern, path):
 	list_domain = settings.LIST_DOMAIN
 	# strip the initial slash 
 	forward_url = os.path.join(list_domain, path)
-	forward_url = "http://" + forward_url
+	forward_url = "https://" + forward_url
 	print forward_url
 	print list_domain
 	expression = "match_recipient('%s')" % route_pattern
