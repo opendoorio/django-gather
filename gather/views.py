@@ -25,13 +25,16 @@ from django.views.decorators.csrf import csrf_exempt
 def event_guide(request):
 	return render(request, 'gather_event_guide.html')
 
-@login_required
 def create_event(request):
 	current_user = request.user
 	# if the user doesn't have a proper profile, then make sure they extend it first
 	# TODO FIXME This is a direct dependency on an external app (the core app where the UserProfile model lives) 
-	if (not current_user.profile.bio) or (not current_user.profile.image):
-		messages.add_message(request, messages.INFO, 'We want to know who you are! Please complete your profile before submitting an event.')
+	print current_user.id
+	if current_user.id == None :
+		messages.add_message(request, messages.INFO, 'We want to know who you are! Please create a profile before submitting an event.')
+		return HttpResponseRedirect('/people/register/?next=/events/create/')
+	elif current_user.is_authenticated and ((not current_user.profile.bio) or (not current_user.profile.image)):
+		messages.add_message(request, messages.INFO, 'We want to know a bit more about you! Please complete your profile before submitting an event.')
 		return HttpResponseRedirect('/people/%s/edit/' % current_user.username)
 
 	other_users = User.objects.exclude(id=current_user.id)
