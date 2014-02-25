@@ -259,7 +259,7 @@ def rsvp_event(request, event_id, event_slug):
 		
 	else:
 		print 'user was aready attending'
-	return HttpResponse(status_code=500); 
+	return HttpResponse(status=500); 
 
 
 ############################################
@@ -289,7 +289,7 @@ def rsvp_cancel(request, event_id, event_slug):
 		return render(request, "snippets/rsvp_info.html", {"num_attendees": num_attendees, "spots_remaining": spots_remaining, "event": event, 'current_user': user, 'user_is_organizer': user_is_organizer });
 	else:
 		print 'user was not attending'
-	return HttpResponse(status_code=500); 
+	return HttpResponse(status=500); 
 
 def rsvp_new_user(request, event_id, event_slug):
 	if not request.method == 'POST':
@@ -323,13 +323,14 @@ def rsvp_new_user(request, event_id, event_slug):
 		event.attendees.add(new_user)
 		print (event.attendees.all())
 		event.save()
-		user_msg = 'Thanks! Your account has been created. Check your email for login info and how to update your preferences.'
-		return HttpResponse(json.dumps({'num_attendees': len(event.attendees.all()), 'user_id': new_user.id, 'user_msg': user_msg}), content_type='application/json')
+		messages.add_message(request, messages.INFO, 'Thanks! Your account has been created. Check your email for login info and how to update your preferences.')
+		return HttpResponse(status=200)
+		#return HttpResponse(json.dumps({'num_attendees': len(event.attendees.all()), 'user_id': new_user.id, 'user_msg': user_msg}), content_type='application/json')
 	else:
-		errors = form.errors
+		errors = json.dumps({"errors": form.errors})
 		return HttpResponse(json.dumps(errors))
 
-	return HttpResponse(status_code=500); 
+	return HttpResponse(status=500); 
 
 def endorse(request, event_id, event_slug):
 	if not request.method == 'POST':

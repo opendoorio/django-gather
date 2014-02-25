@@ -16,7 +16,8 @@
 			</div>
 			<div class="modal-body">
 				<h4>We need a bit more info to keep you posted on this event. </h4> 	
-					<p><em>Already a member? <a href="/people/login">Login instead</a></em></p>
+				<p><em>Already a member? <a href="/people/login">Login instead</a></em></p>
+				<div id="new-user-form-errors"></div>
 				<form id="new-user-form" class="form-horizontal">
 					<div class="form-group">
 						<span class="col-sm-3">
@@ -179,7 +180,6 @@
 	$("#new-user-form").submit(function(event) {
 		form_data = $("#new-user-form").serialize();
 		form_data = form_data + '&csrfmiddlewaretoken=' + '{{ csrf_token }}';
-		console.log(form_data);
 		request = $.ajax({ 
 			data: form_data,	
 			type: "POST",
@@ -187,7 +187,24 @@
 		});
 
 		request.done(function(msg) {
-			location.reload();
+			if (msg.length > 0) {
+				data = JSON.parse(JSON.parse(msg));
+				if (data.errors) {
+					console.log("errors");
+					errors = data.errors;
+					error_html = "<div class='text-danger'>There were errors in the form:</div>";
+					for (var k in errors) {
+						error_html += '<div class="text-danger">' + k + ': ' + errors[k] + '</div>';
+					}
+					console.log(error_html);
+					$("#new-user-form-errors").html(error_html);
+				} else {
+					console.log("shouldn't be here...");
+				} 
+			} else {
+				console.log("success");
+				location.reload();
+			}
 		});
 
 		request.fail(function(msg) {

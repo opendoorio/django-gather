@@ -53,7 +53,11 @@ class NewUserForm(UserCreationForm):
 	email = forms.EmailField(required=True, widget = forms.TextInput(attrs={'class':'form-control'}))
 	first_name = forms.CharField(required=True,  widget = forms.TextInput(attrs={'class':'form-control'}))
 	last_name = forms.CharField(required=True, widget = forms.TextInput(attrs={'class':'form-control'}))
-	username = forms.CharField(required=True, widget = forms.TextInput(attrs={'class':'form-control'}), help_text="30 characters or fewer. Letters, digits and @/./+/-/_ only")
+	username = forms.RegexField(
+			required=True, max_length=30, regex=r"^[\w.@+-]+$",	
+			error_messages = {'invalid': "This value may contain only letters, numbers and @/./+/-/_ characters."},
+			widget = forms.TextInput(attrs={'class':'form-control'}), 
+			help_text="30 characters or fewer. Letters, digits and @/./+/-/_ only")
 	password1 = forms.CharField(label="Password", required=True, widget = forms.PasswordInput(attrs={'class':'form-control'}))
 	password2 = forms.CharField(label="Confirm Password", required=True, widget = forms.PasswordInput(attrs={'class':'form-control'}))
 
