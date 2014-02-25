@@ -62,7 +62,7 @@ def create_event(request):
 			event.attendees.add(current_user)
 			event.save()
 			messages.add_message(request, messages.INFO, 'The event has been created.')
-			return HttpResponseRedirect('/events/e/%s' % event.slug)
+			return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
 		else:
 			print "form error"
 			print form.errors
@@ -72,11 +72,11 @@ def create_event(request):
 	return render(request, 'gather_event_create.html', {'form': form, 'current_user': current_user, 'user_list': json.dumps(user_list), 'is_event_admin': is_event_admin})
 
 @login_required
-def edit_event(request, event_slug):
+def edit_event(request, event_id, event_slug):
 	current_user = request.user
 	other_users = User.objects.exclude(id=current_user.id)
 	user_list = [u.username for u in other_users]
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 	if not (request.user.is_authenticated() and request.user in event.organizers.all()):
 		return HttpResponseRedirect("/")
 
@@ -90,7 +90,7 @@ def edit_event(request, event_slug):
 			event.organizers.add(*co_organizers)
 			event.save()
 			messages.add_message(request, messages.INFO, 'The event has been saved.')
-			return HttpResponseRedirect('/events/e/%s' % event.slug)
+			return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
 		else:
 			print "form error"
 			print form.errors
@@ -102,10 +102,15 @@ def edit_event(request, event_slug):
 		other_organizer_usernames_string = ",".join(other_organizer_usernames)
 		print event.organizers.all()
 		form = EventForm(instance=event, initial={'co_organizers': other_organizer_usernames_string})
-	return render(request, 'gather_event_edit.html', {'form': form, 'current_user': current_user, 'event_slug': event_slug, 'user_list': json.dumps(user_list)})
+	return render(request, 'gather_event_edit.html', {'form': form, 'current_user': current_user, 'event_id': event_id, 'event_slug': event_slug, 'user_list': json.dumps(user_list)})
 
-def view_event(request, event_slug):
-	event = Event.objects.get(slug=event_slug)
+def view_event(request, event_id, event_slug):
+	event = Event.objects.get(id=event_id)
+
+	# if the slug has changed, redirect the viewer to the correct url (one
+	# where the url matches the current slug)
+	if event.slug != event_slug:
+		HttpResponseRedirect('')
 
 	# is the event in the past?
 	today = timezone.now()
@@ -234,12 +239,12 @@ def past_events(request):
 
 
 @login_required
-def rsvp_event(request, event_slug):
+def rsvp_event(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
 	user_id_str = request.POST.get('user_id')
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 	user = User.objects.get(pk=int(user_id_str))
 	if user in event.organizers.all():
 		user_is_organizer = True
@@ -261,7 +266,7 @@ def rsvp_event(request, event_slug):
 ########### AJAX REQUESTS ##################
 
 @login_required
-def rsvp_cancel(request, event_slug):
+def rsvp_cancel(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
@@ -269,7 +274,7 @@ def rsvp_cancel(request, event_slug):
 
 	print 'event slug'
 	print event_slug
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 	user = User.objects.get(pk=int(user_id_str))
 	if user in event.organizers.all():
 		user_is_organizer = True
@@ -286,7 +291,7 @@ def rsvp_cancel(request, event_slug):
 		print 'user was not attending'
 	return HttpResponse(status_code=500); 
 
-def rsvp_new_user(request, event_slug):
+def rsvp_new_user(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
@@ -314,7 +319,7 @@ def rsvp_new_user(request, event_slug):
 		new_user = authenticate(username=new_user.username, password=password)
 		login(request, new_user)
 		# RSVP new user to the event
-		event = Event.objects.get(slug=event_slug)
+		event = Event.objects.get(id=event_id)
 		event.attendees.add(new_user)
 		print (event.attendees.all())
 		event.save()
@@ -326,11 +331,11 @@ def rsvp_new_user(request, event_slug):
 
 	return HttpResponse(status_code=500); 
 
-def endorse(request, event_slug):
+def endorse(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 
 	print request.POST
 	endorser = request.user
@@ -339,11 +344,11 @@ def endorse(request, event_slug):
 	endorsements = event.endorsements.all()
 	return render(request, "snippets/endorsements.html", {"endorsements": endorsements, "current_user": request.user});
 
-def event_approve(request, event_slug):
+def event_approve(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 	event_admin = Group.objects.get(name='gather_event_admin')
 
 	print request.POST
@@ -360,11 +365,11 @@ def event_approve(request, event_slug):
 	msg_success = "Success! The event has been approved."
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
-def event_publish(request, event_slug):
+def event_publish(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
-	event = Event.objects.get(slug=event_slug)
+	event = Event.objects.get(id=event_id)
 	event_admin = Group.objects.get(name='gather_event_admin')
 
 	print request.POST
@@ -454,7 +459,7 @@ def event_message(request):
 
 	# add in footer
 	domain = Site.objects.get_current().domain
-	event_url = domain + '/events/%s' % event.slug
+	event_url = domain + '/events/%d/%s' % (event.id, event.slug)
 	print event_url
 	footer = '''\n\n-------------------------------------------\nYou are receving this email because you are one of the organizers or an event admin at this location. Visit this event online at %s.'''% event_url
 	body_plain = body_plain + footer

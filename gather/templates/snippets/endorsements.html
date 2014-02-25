@@ -28,7 +28,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '/events/e/{{event.slug}}/endorse/'
+			url: '/events/{{event.id}}/{{event.slug}}/endorse/'
 		});
 
 		request.done(function(msg) {

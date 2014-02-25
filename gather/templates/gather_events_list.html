@@ -14,7 +14,7 @@
 	<div class="col-md-12 event">
 		<div class="col-md-1 date"><span class="day">{{ event.start|date:'j'}}</span>{{ event.start|date:'b'|title}}</div>
 		<div class="col-md-11">
-			<a href="/events/e/{{event.slug}}/"> <h3 class="event-title">{{ event.title}}</h3> </a>
+			<a href="/events/{{event.id}}/{{event.slug}}/"> <h3 class="event-title">{{ event.title}}</h3> </a>
 			<div class="col-md-4">
 				<img class="event-preview-img-thumb" src="{{ event.image.url }}"/>
 			</div>

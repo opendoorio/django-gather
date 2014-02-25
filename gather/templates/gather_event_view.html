@@ -3,7 +3,7 @@
 
 <meta property="og:image" content="https://{{domain}}{{ MEDIA_URL }}{{ event.image }}"/>
 <meta property="og:title" content="{{event.title|title}}"/>
-<meta property="og:url" content="https://{{domain}}/events/e/{{event.slug}}"/>
+<meta property="og:url" content="https://{{domain}}/events/{{event.id}}/{{event.slug}}"/>
 <meta property="og:description" content="{{event.description}}"/>
 
 <div id="event-view-wrapper">
@@ -166,7 +166,7 @@
 {% if event.status == 'live' and not event.private %}
 <div class="row">
 <div class="col-md-2 col-md-offset-5" id="facebook-share-link">
-	<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2F{{domain}}/events/e/{{event.slug}}" target="_blank"> Share on Facebook </a>
+	<a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2F{{domain}}/events/{{event.id}}/{{event.slug}}" target="_blank"> Share on Facebook </a>
 </div>
 </div>
 {% endif %}
@@ -183,7 +183,7 @@
 		request = $.ajax({ 
 			data: form_data,	
 			type: "POST",
-			url: '/events/e/{{event.slug}}/rsvp/yes/newuser/'
+			url: '/events/{{event.id}}/{{event.slug}}/rsvp/yes/newuser/'
 		});
 
 		request.done(function(msg) {
@@ -203,7 +203,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '/events/e/{{event.slug}}/approve/'
+			url: '/events/{{event.id}}/{{event.slug}}/approve/'
 		});
 		request.done(function(msg) {
 			$("#event-status-area").html(msg);
@@ -222,7 +222,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '/events/e/{{event.slug}}/publish/'
+			url: '/events/{{event.id}}/{{event.slug}}/publish/'
 		});
 
 	});

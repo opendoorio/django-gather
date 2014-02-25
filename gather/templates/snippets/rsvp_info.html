@@ -62,7 +62,7 @@
 					'csrfmiddlewaretoken': '{{ csrf_token }}'
 				}, 
 				type: "POST",
-				url: '/events/e/{{event.slug}}/rsvp/yes/'
+				url: '/events/{{event.id}}/{{event.slug}}/rsvp/yes/'
 			});
 
 			request.done(function(msg) {
@@ -83,7 +83,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			}, 
 			type: "POST",
-			url: '/events/e/{{event.slug}}/rsvp/no/'
+			url: '/events/{{event.id}}/{{event.slug}}/rsvp/no/'
 		});
 
 		request.done(function(msg) { // on success..

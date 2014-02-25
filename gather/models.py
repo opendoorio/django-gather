@@ -52,7 +52,7 @@ class Event(models.Model):
 	start = models.DateTimeField(verbose_name="Start time")
 	end = models.DateTimeField(verbose_name="End time")
 	title = models.CharField(max_length=300)
-	slug = models.CharField(max_length=300, help_text="This will be auto-suggested based on the event title, but feel free to customize it.", unique=True)
+	slug = models.CharField(max_length=60, help_text="This will be auto-suggested based on the event title, but feel free to customize it.", unique=True)
 	description = models.TextField(help_text="Basic HTML markup is supported for your event description.")
 	image = models.ImageField(upload_to=event_img_upload_to)
 	attendees = models.ManyToManyField(User, related_name="events_attending", blank=True, null=True)  
