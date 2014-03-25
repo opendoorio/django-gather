@@ -13,7 +13,7 @@ $("#id_co_organizers")
 		$( this ).data( "ui-autocomplete" ).menu.active ) {
 		event.preventDefault();
 	}
-	})
+})
 .autocomplete({
 	source: function(request, response) {
 		source_list = {{user_list|safe}};

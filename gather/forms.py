@@ -4,10 +4,11 @@ from gather.models import Event
 from django import forms
 from lxml.html.clean import clean_html
 import re
-
+from django.core.exceptions import ObjectDoesNotExist
+from django.utils.translation import ugettext as _
 
 class EventForm(forms.ModelForm):
-	co_organizers = forms.CharField(required=False,  widget = forms.TextInput(attrs={'class':'form-control'}), help_text = "Optionally, select other members to co-host this event.")
+	co_organizers = forms.CharField(required=False,  widget = forms.TextInput(attrs={'class':'form-control'}), help_text = "Optionally, select other members to co-host this event (members must have an account on this site to be listed as co-organizers).")
 
 	class Meta:
 		model = Event
@@ -32,7 +33,13 @@ class EventForm(forms.ModelForm):
 		for username in co_organizers_usernames:
 			username = username.strip()
 			if not username == '':
-				co_organizers.append(User.objects.get(username=username))
+				try:
+					co_org_user = User.objects.get(username=username)
+					co_organizers.append(User.objects.get(username=username))
+				except ObjectDoesNotExist:
+					raise forms.ValidationError(
+							_('\'%s\' is not a recognized user, please remove them to save your event. Only users with existing accounts can be listed as co-organizers (but you can always add them later!)' % username),
+						)
 		return co_organizers
 
 	def clean_description(self):
