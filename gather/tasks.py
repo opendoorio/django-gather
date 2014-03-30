@@ -12,6 +12,7 @@ from django.core import urlresolvers
 from django.core.mail import EmailMultiAlternatives
 import requests, pytz, datetime
 from django.db.models import Q
+from itertools import chain
 
 weekday_number_to_name = {
 	0: "Monday",
@@ -74,15 +75,21 @@ def published_events_today_local():
 	today_local = timezone.now().astimezone(current_tz).date()
 	utc_tz = pytz.timezone('UTC')
 	today_local_start_time = datetime.datetime(today_local.year, today_local.month, today_local.day, 0,0)
-	today_local_end_time = datetime.datetime(today_local.year, today_local.month, today_local.day, 11,59,59)
+	today_local_end_time = datetime.datetime(today_local.year, today_local.month, today_local.day, 23,59,59)
 	today_local_start_aware = timezone.make_aware(today_local_start_time, current_tz)
 	today_local_end_aware = timezone.make_aware(today_local_end_time, current_tz)
 	today_local_start_utc = utc_tz.normalize(today_local_start_aware.astimezone(utc_tz))
 	today_local_end_utc = utc_tz.normalize(today_local_end_aware.astimezone(utc_tz))
 
 	# get events happening today that are live
-	events_today_local = Event.objects.filter(start__gte =
+	starts_today_local = Event.objects.filter(start__gte =
 		today_local_start_utc).filter(start__lte=today_local_end_utc).filter(status='live')
+	ends_today_local = Event.objects.filter(end__gte =
+		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
+	across_today_local = Event.objects.filter(start__lte =
+		today_local_start_utc).filter(end__gte=today_local_end_utc).filter(status='live')
+
+	events_today_local = list(set(chain(starts_today_local, ends_today_local, across_today_local)))
 	return events_today_local
 
 @periodic_task(run_every=crontab(hour=4, minute=30))
