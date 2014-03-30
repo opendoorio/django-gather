@@ -407,6 +407,30 @@ def email_preferences(request, username):
 	notifications.save()
 	return HttpResponseRedirect('/people/%s/' % u.username)
 
+def new_user_email_signup(request):
+	if not request.method == 'POST':
+		return HttpResponseRedirect('/404')
+	print request.POST
+
+	# create new user
+	form = NewUserForm(request.POST)
+	if form.is_valid():
+		new_user = form.save()
+		new_user.save()
+		notifications = new_user.event_notifications
+		notifications.weekly = True
+		notifications.save()
+
+		password = request.POST.get('password1')
+		new_user = authenticate(username=new_user.username, password=password)
+		login(request, new_user)
+		messages.add_message(request, messages.INFO, 'Thanks! Your account has been created. You can update your preferences at any time on your <a href="/people/%s">profile</a> page' % new_user.username)
+		return HttpResponse(status=200)
+	else:
+		errors = json.dumps({"errors": form.errors})
+		return HttpResponse(json.dumps(errors))
+
+	return HttpResponse(status=500); 
 
 
 ############################################

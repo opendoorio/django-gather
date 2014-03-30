@@ -39,12 +39,14 @@ class Event(models.Model):
 	FEEDBACK = 'seeking feedback'
 	READY = 'ready to publish'
 	LIVE = 'live'
+	CANCELED = 'canceled'
 
 	event_statuses = (
 			(PENDING, 'Waiting for Approval'),
 			(FEEDBACK, 'Seeking Feedback'),
 			(READY, 'Ready to publish'),
 			(LIVE, 'Live'),
+			(CANCELED, 'Canceled'),
 	)
 
 	created = models.DateTimeField(auto_now_add=True)
