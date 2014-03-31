@@ -158,11 +158,11 @@ def published_events_today_local():
 
 	# get events happening today that are live
 	starts_today_local = Event.objects.filter(start__gte =
-		week_local_start_utc).filter(start__lte=week_local_end_utc).filter(status='live')
+		today_local_start_utc).filter(today__lte=today_local_end_utc).filter(status='live')
 	ends_today_local = Event.objects.filter(end__gte =
-		week_local_start_utc).filter(end__lte=week_local_end_utc).filter(status='live')
+		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
 	across_today_local = Event.objects.filter(start__lte =
-		week_local_start_utc).filter(end__gte=week_local_end_utc).filter(status='live')
+		today_local_start_utc).filter(end__gte=today_local_end_utc).filter(status='live')
 
 	events_today_local = list(set(chain(starts_today_local, ends_today_local, across_today_local)))
 	return events_today_local
