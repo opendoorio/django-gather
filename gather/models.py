@@ -5,6 +5,7 @@ import uuid, os, datetime
 from django.conf import settings
 from django.db.models.signals import post_save
 import requests
+from django.utils import timezone
 
 def event_img_upload_to(instance, filename):
     ext = filename.split('.')[-1]
@@ -18,17 +19,18 @@ def event_img_upload_to(instance, filename):
     return os.path.join(upload_path, filename)
 
 class EventManager(models.Manager):
-	def upcoming(self, upto=3, current_user=None):
+	def upcoming(self, upto=None, current_user=None):
 		# return the events happening today or in the future, returning up to
 		# the number of events specified in the 'upto' argument. 
-		today = datetime.date.today()
-		upcoming = super(EventManager, self).get_query_set().filter(end__gte = today).order_by('start')
-		print upcoming
+		today = timezone.now()
+		print today
+
+		upcoming = super(EventManager, self).get_query_set().filter(end__gte = today).exclude(status=Event.CANCELED).order_by('start')
 		viewable_upcoming = []
 		for event in upcoming:
 			if event.is_viewable(current_user):
 				viewable_upcoming.append(event)
-				if len(viewable_upcoming) == upto:
+				if upto and len(viewable_upcoming) == upto:
 					break
 		print viewable_upcoming
 		return viewable_upcoming

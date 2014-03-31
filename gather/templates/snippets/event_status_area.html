@@ -1,29 +1,30 @@
-{% if event.status != 'live' %}
-
+{% if user_is_organizer or user_is_event_admin %}
 	<div class="event-status bg-warning">
 		{% if user_is_organizer %} 
 			You are an organizer of this event. 
 		{% else %} 
-			You are an event admin. 
+			You are an event administrator at this location. 
 		{% endif %} 
-		This event is <span class="text-success">{{ event.status }}</span>. It will be viewable by non-administrators when it is published.
+		This event is <span class="text-success">{{ event.status }}</span>. 
+			{% if event.status != 'live' %} 
+				It will be viewable by non-administrators when it is published.
+			{% endif %}
 		<span title="Event Endorsements" id="endorsement-area" class="endorsement-area pull-right">
 			{% include 'snippets/endorsements.html' %}
 		</span>
 
 		<div id="event-actions">
-			<!-- you are either an organizer or an admin -->
-			{% if event.status == 'waiting for approval' %} 
-				{% if user_is_event_admin %}
-					<a id="approve-for-publication" href="">Approve for publication</a>
+			{% if user_is_event_admin %}
+				{% if event.status == 'seeking feedback' or event.status == 'ready to publish' %} 
+					<a id="publish-event" href="">Publish this Event</a> to make it live. 
+				{% elif event.status == 'waiting for approval'  %}
+					<a id="publish-event" href="">Publish this Event</a> to make it live immediately or <a id="approve-for-publication" href="">approve it</a> to notify the organizer and let them publish it.
 				{% endif %}
-			{% elif event.status == 'ready to publish' %} 
-				{% if user_is_organizer %}
+			{% elif user_is_organizer %}
+				{% if event.status == 'ready to publish' %} 
 					<a id="publish-event" href="">Publish this Event</a> to make it live.
-				{% endif %}
-			{% elif event.status == 'seeking feedback' %} 
-				{% if user_is_organizer %}
-					Ready to make it live? <a id="publish-event" href="">Publish this Event</a>
+				{% elif event.status == 'waiting for approval' %}
+					You will be notified when this event has been approved.
 				{% endif %}
 			{% endif %}
 		
@@ -37,5 +38,5 @@
 			<span class="glyphicon glyphicon-star"></span> This event is private and will only be viewable to those with the link.
 		</div>
 	{% endif %}
-
 {% endif %}
+

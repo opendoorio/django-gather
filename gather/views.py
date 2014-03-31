@@ -20,6 +20,8 @@ import json
 from gather import WAIT_FOR_FEEDBACK
 import requests
 from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import get_template
+from django.template import Context
 
 
 def event_guide(request):
@@ -61,6 +63,39 @@ def create_event(request):
 			# organizers should be attendees by default, too. 
 			event.attendees.add(current_user)
 			event.save()
+
+			# notify the event admins
+			print 'generating new event notification'
+			event_admin_group = Group.objects.get(name='gather_event_admin')
+			recipients = [admin.email for admin in event_admin_group.user_set.all()]
+			event_short_title = event.title[0:50]
+			if len(event.title) > 50:
+				event_short_title = event_short_title + "..."
+			subject = settings.EMAIL_SUBJECT_PREFIX + "A new event has been created: %s" % event_short_title
+			from_address = settings.DEFAULT_FROM_EMAIL
+			plaintext = get_template('emails/new_event_notify.txt')
+			c = Context({
+				'event': event,
+				'creator': event.creator,
+				'domain' : Site.objects.get_current().domain,
+				'location_name': settings.LOCATION_NAME,
+			})
+			body_plain = plaintext.render(c)
+
+			mailgun_api_key = settings.MAILGUN_API_KEY
+			list_domain = settings.LIST_DOMAIN
+			resp = requests.post(
+				"https://api.mailgun.net/v2/%s/messages" % list_domain,
+				auth=("api", mailgun_api_key),
+				data={"from": from_address,
+					"to": recipients,
+					"subject": subject,
+					"text": body_plain,
+				}
+			)
+			print 'mailgun responded with:'
+			print resp.text
+
 			messages.add_message(request, messages.INFO, 'The event has been created.')
 			return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
 		else:
@@ -105,12 +140,16 @@ def edit_event(request, event_id, event_slug):
 	return render(request, 'gather_event_edit.html', {'form': form, 'current_user': current_user, 'event_id': event_id, 'event_slug': event_slug, 'user_list': json.dumps(user_list)})
 
 def view_event(request, event_id, event_slug):
-	event = Event.objects.get(id=event_id)
+	try:
+		event = Event.objects.get(id=event_id)
+	except:
+		return HttpResponseRedirect('/404')
 
 	# if the slug has changed, redirect the viewer to the correct url (one
 	# where the url matches the current slug)
 	if event.slug != event_slug:
-		HttpResponseRedirect('')
+		print 'event slug has changed'
+		return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
 
 	# is the event in the past?
 	today = timezone.now()
@@ -163,7 +202,8 @@ def upcoming_events(request):
 	else:
 		current_user = None
 	today = datetime.datetime.today()
-	all_upcoming = Event.objects.filter(start__gte = today).order_by('start')
+	all_upcoming = Event.objects.upcoming(current_user = request.user)
+	#all_upcoming = Event.objects.filter(start__gte = today).order_by('start')
 	culled_upcoming = []
 	for event in all_upcoming:
 		if event.is_viewable(current_user):
@@ -348,11 +388,12 @@ def endorse(request, event_id, event_slug):
 def event_approve(request, event_id, event_slug):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
+	event_admin = Group.objects.get(name='gather_event_admin')
+	if event_admin not in request.user.groups.all():
+		return HttpResponseRedirect('/404')
 
 	event = Event.objects.get(id=event_id)
-	event_admin = Group.objects.get(name='gather_event_admin')
 
-	print request.POST
 	event.status = Event.READY
 	event.save()
 	if event_admin in request.user.groups.all():
@@ -364,6 +405,34 @@ def event_approve(request, event_id, event_slug):
 	else:
 		user_is_organizer = False
 	msg_success = "Success! The event has been approved."
+
+	# notify the event organizers
+	print 'generating email to notify organizers'
+	recipients = [organizer.email for organizer in event.organizers.all()]
+	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is ready to be published"
+	from_address = settings.DEFAULT_FROM_EMAIL
+	plaintext = get_template('emails/event_approved_notify.txt')
+	c = Context({
+		'event': event,
+		'domain' : Site.objects.get_current().domain,
+		'location_name': settings.LOCATION_NAME,
+	})
+	body_plain = plaintext.render(c)
+
+	mailgun_api_key = settings.MAILGUN_API_KEY
+	list_domain = settings.LIST_DOMAIN
+	resp = requests.post(
+	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
+	    auth=("api", mailgun_api_key),
+	    data={"from": from_address,
+	          "to": recipients,
+	          "subject": subject,
+	          "text": body_plain,
+		}
+	)
+	print 'mailgun responded with:'
+	print resp.text
+
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
 def event_publish(request, event_id, event_slug):
@@ -385,6 +454,38 @@ def event_publish(request, event_id, event_slug):
 	else:
 		user_is_organizer = False
 	msg_success = "Success! The event has been published."
+
+	# notify the event organizers and admins
+	print 'generating email to notify organizers that event was published'
+	recipients = [organizer.email for organizer in event.organizers.all()]
+	event_short_title = event.title[0:50]
+	if len(event.title) > 50:
+		event_short_title = event_short_title + "..."
+	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is now live: %s" % event_short_title
+	from_address = settings.DEFAULT_FROM_EMAIL
+	plaintext = get_template('emails/event_published_notify.txt')
+	c = Context({
+		'event': event,
+		'domain' : Site.objects.get_current().domain,
+		'location_name': settings.LOCATION_NAME,
+		'event_guide': Site.objects.get_current().domain + "/events/guide/"
+	})
+	body_plain = plaintext.render(c)
+
+	mailgun_api_key = settings.MAILGUN_API_KEY
+	list_domain = settings.LIST_DOMAIN
+	resp = requests.post(
+	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
+	    auth=("api", mailgun_api_key),
+	    data={"from": from_address,
+	          "to": recipients,
+	          "subject": subject,
+	          "text": body_plain,
+		}
+	)
+	print 'mailgun responded with:'
+	print resp.text
+
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
 
@@ -405,6 +506,7 @@ def email_preferences(request, username):
 	else:
 		notifications.weekly = False
 	notifications.save()
+	messages.add_message(request, messages.INFO, 'Your preferences have been updated.')
 	return HttpResponseRedirect('/people/%s/' % u.username)
 
 def new_user_email_signup(request):
@@ -424,7 +526,7 @@ def new_user_email_signup(request):
 		password = request.POST.get('password1')
 		new_user = authenticate(username=new_user.username, password=password)
 		login(request, new_user)
-		messages.add_message(request, messages.INFO, 'Thanks! Your account has been created. You can update your preferences at any time on your <a href="/people/%s">profile</a> page' % new_user.username)
+		messages.add_message(request, messages.INFO, 'Thanks! We\'ll send you weekly event updates. You can update your preferences at any time on your <a href="/people/%s">profile</a> page' % new_user.username)
 		return HttpResponse(status=200)
 	else:
 		errors = json.dumps({"errors": form.errors})
