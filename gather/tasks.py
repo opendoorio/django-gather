@@ -1,6 +1,6 @@
+from __future__ import absolute_import
 from celery.task.schedules import crontab
 from celery.task import periodic_task
-from __future__ import absolute_import
 from celery import shared_task
 from gather.models import Event, EventNotifications
 from django.contrib.auth.models import User
