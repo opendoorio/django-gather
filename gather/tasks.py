@@ -158,7 +158,7 @@ def published_events_today_local():
 
 	# get events happening today that are live
 	starts_today_local = Event.objects.filter(start__gte =
-		today_local_start_utc).filter(today__lte=today_local_end_utc).filter(status='live')
+		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
 	ends_today_local = Event.objects.filter(end__gte =
 		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
 	across_today_local = Event.objects.filter(start__lte =
@@ -172,6 +172,9 @@ def published_events_today_local():
 def events_today_reminder():
 	
 	events_today_local = published_events_today_local()
+	if len(events_today_local) == 0:
+		print 'no events today!'
+		return
 	# for each event, 
 	#	for each attendee or organizer
 	#		if they want reminders, append this event to a list of reminders for today, for that person. 
