@@ -12,16 +12,15 @@ class EventForm(forms.ModelForm):
 
 	class Meta:
 		model = Event
-		exclude = ['created', 'updated', 'creator', 'attendees', 'organizers', 'status']
+		exclude = ['created', 'updated', 'creator', 'attendees', 'organizers', 'status', 'admin', 'location']
 		widgets = {
 				'start': forms.TextInput(attrs={'class':'datepicker form-control'}),
 				'end': forms.TextInput(attrs={'class':'datepicker form-control'}),
 				'title': forms.TextInput(attrs={'class':'form-control'}),
 				'slug': forms.TextInput(attrs={'class':'form-control'}),
 				'description': forms.Textarea(attrs={'class':'form-control', 'rows': '5'}),
-				'location': forms.TextInput(attrs={'class':'form-control'}),
+				'where': forms.TextInput(attrs={'class':'form-control'}),
 				'limit': forms.TextInput(attrs={'class':'form-control'}),
-				#'organizers': forms.TextInput(attrs={'class':'form-control'}),
 				'organizer_notes': forms.Textarea(attrs={'class':'form-control', 'rows': 3}),
 				}
 

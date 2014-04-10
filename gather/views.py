@@ -13,21 +13,39 @@ import datetime
 from django.contrib import messages
 from django.conf import settings
 from django.db.models import Q
-from gather.models import Event
+from gather.models import Event, EventAdminGroup, EventSeries
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 import json
-from gather import WAIT_FOR_FEEDBACK
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import get_template
 from django.template import Context
+from django.core.urlresolvers import reverse
+from django.db.models.loading import get_model
+from gather.emails import new_event_notification, event_approved_notification, event_published_notification
 
+Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
 
-def event_guide(request):
+class LocationNotUniqueException(Exception):
+	pass
+
+def get_location(location_slug):
+	if location_slug:
+		location = Location.objects.get(slug=location_slug)
+	else:
+		if Location.objects.count() == 1:
+			location = Location.objects.get(id=1)
+		else:
+			raise LocationNotUniqueException("You did not specify a location and yet there is more than one location defined. Please specify a location.")
+	return location
+
+def event_guide(request, location_slug=None):
+	location = get_location(location_slug)
 	return render(request, 'gather_event_guide.html')
 
-def create_event(request):
+def create_event(request, location_slug=None):
+	location = get_location(location_slug)
 	current_user = request.user
 	# if the user doesn't have a proper profile, then make sure they extend it first
 	# TODO FIXME This is a direct dependency on an external app (the core app where the UserProfile model lives) 
@@ -40,21 +58,24 @@ def create_event(request):
 		return HttpResponseRedirect('/people/%s/edit/' % current_user.username)
 
 	other_users = User.objects.exclude(id=current_user.id)
+	# get a list of users so that those creating an event can select from
+	# existing users as event co-organizers
 	user_list = [u.username for u in other_users]
-	try:
-		event_admin = Group.objects.get(name='gather_event_admin')
-		if event_admin in current_user.groups.all():
-			is_event_admin = True
-		else:
-			is_event_admin = False
-	except:
+	location_admin_group = EventAdminGroup.objects.get(location=location)
+	if current_user in location_admin_group.users.all():
+		is_event_admin = True
+	else:
 		is_event_admin = False
+
 	if request.method == 'POST':
 		print request.POST
 		form = EventForm(request.POST, request.FILES)
 		if form.is_valid():
 			event = form.save(commit=False)
 			event.creator = current_user
+			# associate this event with a specific location and admin group
+			event.location = location
+			event.admin = location_admin_group
 			event.save()
 			co_organizers = form.cleaned_data.get('co_organizers')
 			# always make sure current user is an organizer
@@ -64,50 +85,25 @@ def create_event(request):
 			event.attendees.add(current_user)
 			event.save()
 
-			# notify the event admins
-			print 'generating new event notification'
-			event_admin_group = Group.objects.get(name='gather_event_admin')
-			recipients = [admin.email for admin in event_admin_group.user_set.all()]
-			event_short_title = event.title[0:50]
-			if len(event.title) > 50:
-				event_short_title = event_short_title + "..."
-			subject = settings.EMAIL_SUBJECT_PREFIX + "A new event has been created: %s" % event_short_title
-			from_address = settings.DEFAULT_FROM_EMAIL
-			plaintext = get_template('emails/new_event_notify.txt')
-			c = Context({
-				'event': event,
-				'creator': event.creator,
-				'domain' : Site.objects.get_current().domain,
-				'location_name': settings.LOCATION_NAME,
-			})
-			body_plain = plaintext.render(c)
-
-			mailgun_api_key = settings.MAILGUN_API_KEY
-			list_domain = settings.LIST_DOMAIN
-			resp = requests.post(
-				"https://api.mailgun.net/v2/%s/messages" % list_domain,
-				auth=("api", mailgun_api_key),
-				data={"from": from_address,
-					"to": recipients,
-					"subject": subject,
-					"text": body_plain,
-				}
-			)
-			print 'mailgun responded with:'
-			print resp.text
+			new_event_notification(event)
 
 			messages.add_message(request, messages.INFO, 'The event has been created.')
-			return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
+			try:
+				resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
+			except:
+				resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
+			return resp
 		else:
 			print "form error"
 			print form.errors
 
 	else:
 		form = EventForm()
-	return render(request, 'gather_event_create.html', {'form': form, 'current_user': current_user, 'user_list': json.dumps(user_list), 'is_event_admin': is_event_admin})
+	return render(request, 'gather_event_create.html', {'form': form, 'current_user': current_user, 'user_list': json.dumps(user_list), 'is_event_admin': is_event_admin, 'location': location})
 
 @login_required
-def edit_event(request, event_id, event_slug):
+def edit_event(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	current_user = request.user
 	other_users = User.objects.exclude(id=current_user.id)
 	user_list = [u.username for u in other_users]
@@ -125,7 +121,11 @@ def edit_event(request, event_id, event_slug):
 			event.organizers.add(*co_organizers)
 			event.save()
 			messages.add_message(request, messages.INFO, 'The event has been saved.')
-			return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
+			try:
+				resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
+			except:
+				resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
+			return resp
 		else:
 			print "form error"
 			print form.errors
@@ -137,19 +137,31 @@ def edit_event(request, event_id, event_slug):
 		other_organizer_usernames_string = ",".join(other_organizer_usernames)
 		print event.organizers.all()
 		form = EventForm(instance=event, initial={'co_organizers': other_organizer_usernames_string})
-	return render(request, 'gather_event_edit.html', {'form': form, 'current_user': current_user, 'event_id': event_id, 'event_slug': event_slug, 'user_list': json.dumps(user_list)})
+	return render(request, 'gather_event_edit.html', {'form': form, 'current_user': current_user, 'event_id': event_id, 'event_slug': event_slug, 'user_list': json.dumps(user_list), 'location': location})
 
-def view_event(request, event_id, event_slug):
+def view_event(request, event_id, event_slug, location_slug=None):
+	# XXX should we double check the associated location here? currently the
+	# assumption is that if an event is being viewed under a specific location
+	# that that will be reflected in the URL path. 
 	try:
 		event = Event.objects.get(id=event_id)
 	except:
+		print 'event not found'
 		return HttpResponseRedirect('/404')
 
+	location = get_location(location_slug)
 	# if the slug has changed, redirect the viewer to the correct url (one
 	# where the url matches the current slug)
 	if event.slug != event_slug:
 		print 'event slug has changed'
-		return HttpResponseRedirect('/events/%d/%s' % (event.id, event.slug))
+		# there's some tomfoolery here since we don't know for sure if the app
+		# is being used in a project that specifies the location as part of the
+		# url. probably a better way to do this...
+		try:
+			resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
+		except:
+			resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
+		return resp
 
 	# is the event in the past?
 	today = timezone.now()
@@ -164,8 +176,8 @@ def view_event(request, event_id, event_slug):
 		current_user = request.user
 		new_user_form = None
 		login_form = None
-		event_admin_group = Group.objects.get(name='gather_event_admin')
-		if event_admin_group in current_user.groups.all(): 
+		location_event_admin = EventAdminGroup.objects.get(location=location)
+		if request.user in location_event_admin.users.all():
 			user_is_event_admin = True
 		else:
 			user_is_event_admin = False
@@ -190,20 +202,21 @@ def view_event(request, event_id, event_slug):
 		return render(request, 'gather_event_view.html', {'event': event, 'current_user': current_user, 
 			'user_is_organizer': user_is_organizer, 'new_user_form': new_user_form, "event_email": event_email, "domain": domain,
 			'login_form': login_form, "spots_remaining": spots_remaining, 'user_is_event_admin': user_is_event_admin, 
-			"num_attendees": num_attendees, 'in_the_past': past, 'endorsements': event.endorsements.all()})
+			"num_attendees": num_attendees, 'in_the_past': past, 'endorsements': event.endorsements.all(), 'location': location})
 
 	else:
 		return HttpResponseRedirect('/404')
 
 
-def upcoming_events(request):
+def upcoming_events_all_locations(request):
+	''' if a site supports multiple locations this page can be used to show
+	events across all locations.'''
 	if request.user.is_authenticated():
 		current_user = request.user
 	else:
 		current_user = None
 	today = datetime.datetime.today()
 	all_upcoming = Event.objects.upcoming(current_user = request.user)
-	#all_upcoming = Event.objects.filter(start__gte = today).order_by('start')
 	culled_upcoming = []
 	for event in all_upcoming:
 		if event.is_viewable(current_user):
@@ -224,41 +237,77 @@ def upcoming_events(request):
 	return render(request, 'gather_events_list.html', {"events": events, 'current_user': current_user, 'page_title': 'Upcoming Events'})
 
 
-def user_events(request, username):
+
+def upcoming_events(request, location_slug=None):
+	''' upcoming events limited to a specific location (either the one
+	specified or the default single location).'''
+	if request.user.is_authenticated():
+		current_user = request.user
+	else:
+		current_user = None
+	today = datetime.datetime.today()
+	location = get_location(location_slug)
+	all_upcoming = Event.objects.upcoming(current_user = request.user).filter(location=location)
+	culled_upcoming = []
+	for event in all_upcoming:
+		if event.is_viewable(current_user):
+			culled_upcoming.append(event)
+
+	# show 10 events per page
+	paged_upcoming = Paginator(culled_upcoming, 10) 
+	page = request.GET.get('page')
+	try:
+		events = paged_upcoming.page(page)
+	except PageNotAnInteger:
+		# If page is not an integer, deliver first page.
+		events = paged_upcoming.page(1)
+	except EmptyPage:
+		# If page is out of range (e.g. 9999), deliver last page of results.
+		events = paged_upcoming.page(paginator.num_pages)
+
+	return render(request, 'gather_events_list.html', {"events": events, 'current_user': current_user, 'page_title': 'Upcoming Events', 'location': location})
+
+
+def user_events(request, username, location_slug):
+	location = get_location(location_slug)
 	user = User.objects.get(username=username)
 	today = timezone.now()
-	events_organized_upcoming = user.events_organized.all().filter(end__gte = today).order_by('start')
-	events_attended_upcoming = user.events_attending.all().filter(end__gte = today).order_by('start')
-	events_organized_past = user.events_organized.all().filter(end__lt = today).order_by('-start')
-	events_attended_past = user.events_attending.all().filter(end__lt = today).order_by('-start')
-	return render(request, 'gather_user_events_list.html', {'events_organized_upcoming': events_organized_upcoming, 
+	events_organized_upcoming = user.events_organized.all().filter(end__gte = today).order_by('start').filter(location=location)
+	events_attended_upcoming = user.events_attending.all().filter(end__gte = today).order_by('start').filter(location=location)
+	events_organized_past = user.events_organized.all().filter(end__lt = today).order_by('-start').filter(location=location)
+	events_attended_past = user.events_attending.all().filter(end__lt = today).order_by('-start').filter(location=location)
+	return render(request, 'gather_user_events_list.html', {
+		'events_organized_upcoming': events_organized_upcoming, 
 		'events_attended_upcoming': events_attended_upcoming, 
 		'events_organized_past': events_organized_past, 
 		'events_attended_past': events_attended_past, 
-		'current_user': user, 'page_title': 'Upcoming Events'})
+		'current_user': user, 'page_title': 'Upcoming Events', 'location': location
+	})
 
 
 @login_required
-def needs_review(request):
-	# if user is not an event admin, redirect
-	event_admin = Group.objects.get(name='gather_event_admin')
-	if not request.user.is_authenticated() or (event_admin not in request.user.groups.all()):
+def needs_review(request, location_slug=None):
+	location = get_location(location_slug)
+	# if user is not an event admin at this location, redirect
+	location_admin_group = EventAdminGroup.objects.get(location=location)
+	if not request.user.is_authenticated() or (request.user not in location_admin_group.users.all()):
 		return HttpResponseRedirect('/')
 		
 	# upcoming events that are not yet live
 	today = timezone.now()
-	events_pending = Event.objects.filter(status=Event.PENDING).filter(end__gte = today)
-	events_under_discussion = Event.objects.filter(status=Event.FEEDBACK).filter(end__gte = today)
-	return render(request, 'gather_events_admin_needing_review.html', {'events_pending': events_pending, 'events_under_discussion': events_under_discussion })
+	events_pending = Event.objects.filter(status=Event.PENDING).filter(end__gte = today).filter(location=location)
+	events_under_discussion = Event.objects.filter(status=Event.FEEDBACK).filter(end__gte = today).filter(location=location)
+	return render(request, 'gather_events_admin_needing_review.html', {'events_pending': events_pending, 'events_under_discussion': events_under_discussion, 'location': location })
 
-def past_events(request):
+def past_events(request, location_slug=None):
+	location = get_location(location_slug)
 	if request.user.is_authenticated():
 		current_user = request.user
 	else:
 		current_user = None
 	today = datetime.datetime.today()
 	# most recent first
-	all_past = Event.objects.filter(start__lt = today).order_by('-start')
+	all_past = Event.objects.filter(start__lt = today).order_by('-start').filter(location=location)
 	culled_past = []
 	for event in all_past:
 		if event.is_viewable(current_user):
@@ -275,11 +324,36 @@ def past_events(request):
 		# If page is out of range (e.g. 9999), deliver last page of results.
 		events = paged_past.page(paginator.num_pages)
 
-	return render(request, 'gather_events_list.html', {"events": events, 'user': current_user, 'page_title': 'Past Events'})
+	return render(request, 'gather_events_list.html', {"events": events, 'user': current_user, 'page_title': 'Past Events', 'location': location})
+
+
+def email_preferences(request, username, location_slug=None):
+	if not request.method == 'POST':
+		return HttpResponseRedirect('/404')
+	
+	print request.POST
+	u = User.objects.get(username=username)
+	notifications = u.event_notifications
+	if request.POST.get('event_reminders') == 'on':
+		notifications.reminders = True
+	else:
+		notifications.reminders = False
+
+	if request.POST.get('weekly_updates') == 'on':
+		notifications.weekly = True
+	else:
+		notifications.weekly = False
+	notifications.save()
+	messages.add_message(request, messages.INFO, 'Your preferences have been updated.')
+	return HttpResponseRedirect('/people/%s/' % u.username)
+
+############################################
+########### AJAX REQUESTS ##################
 
 
 @login_required
-def rsvp_event(request, event_id, event_slug):
+def rsvp_event(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
@@ -295,18 +369,15 @@ def rsvp_event(request, event_id, event_slug):
 		event.save()
 		num_attendees = event.attendees.count()
 		spots_remaining = event.limit - num_attendees 
-		return render(request, "snippets/rsvp_info.html", {"num_attendees": num_attendees, "spots_remaining": spots_remaining, "event": event, 'current_user': user, 'user_is_organizer': user_is_organizer });
+		return render(request, "snippets/rsvp_info.html", {"num_attendees": num_attendees, "spots_remaining": spots_remaining, "event": event, 'current_user': user, 'user_is_organizer': user_is_organizer, 'location': location });
 		
 	else:
 		print 'user was aready attending'
 	return HttpResponse(status=500); 
 
-
-############################################
-########### AJAX REQUESTS ##################
-
 @login_required
-def rsvp_cancel(request, event_id, event_slug):
+def rsvp_cancel(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
@@ -326,15 +397,17 @@ def rsvp_cancel(request, event_id, event_slug):
 		event.save()
 		num_attendees = event.attendees.count()
 		spots_remaining = event.limit - num_attendees 
-		return render(request, "snippets/rsvp_info.html", {"num_attendees": num_attendees, "spots_remaining": spots_remaining, "event": event, 'current_user': user, 'user_is_organizer': user_is_organizer });
+		return render(request, "snippets/rsvp_info.html", {"num_attendees": num_attendees, "spots_remaining": spots_remaining, "event": event, 'current_user': user, 'user_is_organizer': user_is_organizer, 'location': location });
 	else:
 		print 'user was not attending'
 	return HttpResponse(status=500); 
 
-def rsvp_new_user(request, event_id, event_slug):
+def rsvp_new_user(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
+	print 'in rsvp_new_user'
 	print request.POST
 	# get email signup info and remove from form, since we tacked this field on
 	# but it's not part of the user model. 
@@ -365,14 +438,14 @@ def rsvp_new_user(request, event_id, event_slug):
 		event.save()
 		messages.add_message(request, messages.INFO, 'Thanks! Your account has been created. Check your email for login info and how to update your preferences.')
 		return HttpResponse(status=200)
-		#return HttpResponse(json.dumps({'num_attendees': len(event.attendees.all()), 'user_id': new_user.id, 'user_msg': user_msg}), content_type='application/json')
 	else:
 		errors = json.dumps({"errors": form.errors})
 		return HttpResponse(json.dumps(errors))
 
 	return HttpResponse(status=500); 
 
-def endorse(request, event_id, event_slug):
+def endorse(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 
@@ -383,20 +456,21 @@ def endorse(request, event_id, event_slug):
 	event.endorsements.add(endorser)
 	event.save()
 	endorsements = event.endorsements.all()
-	return render(request, "snippets/endorsements.html", {"endorsements": endorsements, "current_user": request.user});
+	return render(request, "snippets/endorsements.html", {"endorsements": endorsements, "current_user": request.user, 'location': location, 'event': event});
 
-def event_approve(request, event_id, event_slug):
+def event_approve(request, event_id, event_slug, location_slug=None):
+	location = get_location(location_slug)
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
-	event_admin = Group.objects.get(name='gather_event_admin')
-	if event_admin not in request.user.groups.all():
+	location_event_admin = EventAdminGroup.objects.get(location=location)
+	if request.user not in location_event_admin.users.all():
 		return HttpResponseRedirect('/404')
 
 	event = Event.objects.get(id=event_id)
 
 	event.status = Event.READY
 	event.save()
-	if event_admin in request.user.groups.all():
+	if request.user in location_event_admin.users.all():
 		user_is_event_admin = True
 	else:
 		user_is_event_admin = False
@@ -407,45 +481,24 @@ def event_approve(request, event_id, event_slug):
 	msg_success = "Success! The event has been approved."
 
 	# notify the event organizers
-	print 'generating email to notify organizers'
-	recipients = [organizer.email for organizer in event.organizers.all()]
-	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is ready to be published"
-	from_address = settings.DEFAULT_FROM_EMAIL
-	plaintext = get_template('emails/event_approved_notify.txt')
-	c = Context({
-		'event': event,
-		'domain' : Site.objects.get_current().domain,
-		'location_name': settings.LOCATION_NAME,
-	})
-	body_plain = plaintext.render(c)
-
-	mailgun_api_key = settings.MAILGUN_API_KEY
-	list_domain = settings.LIST_DOMAIN
-	resp = requests.post(
-	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
-	    auth=("api", mailgun_api_key),
-	    data={"from": from_address,
-	          "to": recipients,
-	          "subject": subject,
-	          "text": body_plain,
-		}
-	)
-	print 'mailgun responded with:'
-	print resp.text
+	event_approved_notification(event)
 
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
-def event_publish(request, event_id, event_slug):
+def event_publish(request, event_id, event_slug, location_slug=None):
 	if not request.method == 'POST':
+		return HttpResponseRedirect('/404')
+	location = get_location(location_slug)
+	location_event_admin = EventAdminGroup.objects.get(location=location)
+	if request.user not in location_event_admin.users.all():
 		return HttpResponseRedirect('/404')
 
 	event = Event.objects.get(id=event_id)
-	event_admin = Group.objects.get(name='gather_event_admin')
 
 	print request.POST
 	event.status = Event.LIVE
 	event.save()
-	if event_admin in request.user.groups.all():
+	if request.user in location_event_admin.users.all():
 		user_is_event_admin = True
 	else:
 		user_is_event_admin = False
@@ -456,60 +509,12 @@ def event_publish(request, event_id, event_slug):
 	msg_success = "Success! The event has been published."
 
 	# notify the event organizers and admins
-	print 'generating email to notify organizers that event was published'
-	recipients = [organizer.email for organizer in event.organizers.all()]
-	event_short_title = event.title[0:50]
-	if len(event.title) > 50:
-		event_short_title = event_short_title + "..."
-	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is now live: %s" % event_short_title
-	from_address = settings.DEFAULT_FROM_EMAIL
-	plaintext = get_template('emails/event_published_notify.txt')
-	c = Context({
-		'event': event,
-		'domain' : Site.objects.get_current().domain,
-		'location_name': settings.LOCATION_NAME,
-		'event_guide': Site.objects.get_current().domain + "/events/guide/"
-	})
-	body_plain = plaintext.render(c)
-
-	mailgun_api_key = settings.MAILGUN_API_KEY
-	list_domain = settings.LIST_DOMAIN
-	resp = requests.post(
-	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
-	    auth=("api", mailgun_api_key),
-	    data={"from": from_address,
-	          "to": recipients,
-	          "subject": subject,
-	          "text": body_plain,
-		}
-	)
-	print 'mailgun responded with:'
-	print resp.text
+	event_published_notification(event)
 
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
 
-def email_preferences(request, username):
-	if not request.method == 'POST':
-		return HttpResponseRedirect('/404')
-	
-	print request.POST
-	u = User.objects.get(username=username)
-	notifications = u.event_notifications
-	if request.POST.get('event_reminders') == 'on':
-		notifications.reminders = True
-	else:
-		notifications.reminders = False
-
-	if request.POST.get('weekly_updates') == 'on':
-		notifications.weekly = True
-	else:
-		notifications.weekly = False
-	notifications.save()
-	messages.add_message(request, messages.INFO, 'Your preferences have been updated.')
-	return HttpResponseRedirect('/people/%s/' % u.username)
-
-def new_user_email_signup(request):
+def new_user_email_signup(request, location_slug=None):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 	print request.POST
@@ -534,12 +539,11 @@ def new_user_email_signup(request):
 
 	return HttpResponse(status=500); 
 
-
 ############################################
 ########### EMAIL ENDPOINTS ################
 
 @csrf_exempt
-def event_message(request):
+def event_message(request, location_slug=None):
 	''' new messages sent to event email addresses are posed to this view '''
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
@@ -565,8 +569,9 @@ def event_message(request):
 
 	# find the event organizers and admins
 	organizers = event.organizers.all()
-	admin_group = Group.objects.get(name='gather_event_admin')
-	admins = admin_group.user_set.all()
+	location = get_location(location_slug)
+	location_event_admin = EventAdminGroup.objects.get(location=location)
+	admins = location_event_admin.users.all()
 
 	# bcc list 
 	bcc_list = []
