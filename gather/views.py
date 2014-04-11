@@ -247,7 +247,7 @@ def upcoming_events(request, location_slug=None):
 		current_user = None
 	today = datetime.datetime.today()
 	location = get_location(location_slug)
-	all_upcoming = Event.objects.upcoming(current_user = request.user).filter(location=location)
+	all_upcoming = Event.objects.upcoming(current_user = request.user, location=location)
 	culled_upcoming = []
 	for event in all_upcoming:
 		if event.is_viewable(current_user):
