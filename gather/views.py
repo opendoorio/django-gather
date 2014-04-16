@@ -30,12 +30,16 @@ Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
 class LocationNotUniqueException(Exception):
 	pass
 
-def get_location(location_slug):
+def get_location(location_slug=None):
 	if location_slug:
 		location = Location.objects.get(slug=location_slug)
 	else:
 		if Location.objects.count() == 1:
-			location = Location.objects.get(id=1)
+			# the single object might not have pk=1 if a locationw as
+			# previously created and then deleted, so by using the all() (after
+			# checking there is only one location object) we aren't assuming
+			# any particular id. 
+			location = Location.objects.all()[0]
 		else:
 			raise LocationNotUniqueException("You did not specify a location and yet there is more than one location defined. Please specify a location.")
 	return location
