@@ -16,6 +16,10 @@ class EventAdminGroup(models.Model):
 	def __unicode__(self):
 		return self.location.name + " Admin Group"
 	
+	class Meta:
+		app_label = 'gather'
+	
+	
 
 class EventSeries(models.Model):
 	''' Events may be associated with a series. A series has a name and
@@ -25,6 +29,9 @@ class EventSeries(models.Model):
 
 	def __unicode__(self):
 		return self.name
+
+	class Meta:
+		app_label = 'gather'
 
 class Location(models.Model):
 	''' A stub location model to support basic location-based functionality.
@@ -42,16 +49,20 @@ class Location(models.Model):
 	def __unicode__(self):
 		return self.name
 
-def event_img_upload_to(instance, filename):
-    ext = filename.split('.')[-1]
-    # rename file to random string
-    filename = "%s.%s" % (uuid.uuid4(), ext.lower())
+	class Meta:
+		app_label = 'gather'
 
-    upload_path = "data/events/%s/" % instance.slug
-    upload_abs_path = os.path.join(settings.MEDIA_ROOT, upload_path)
-    if not os.path.exists(upload_abs_path):
-        os.makedirs(upload_abs_path)
-    return os.path.join(upload_path, filename)
+def event_img_upload_to(instance, filename):
+	ext = filename.split('.')[-1]
+	# rename file to random string
+	filename = "%s.%s" % (uuid.uuid4(), ext.lower())
+
+	upload_path = "data/events/%s/" % instance.slug
+	upload_abs_path = os.path.join(settings.MEDIA_ROOT, upload_path)
+	if not os.path.exists(upload_abs_path):
+		os.makedirs(upload_abs_path)
+	return os.path.join(upload_path, filename)
+
 
 class EventManager(models.Manager):
 	def upcoming(self, upto=None, current_user=None, location=None):
@@ -71,6 +82,9 @@ class EventManager(models.Manager):
 					break
 		print viewable_upcoming
 		return viewable_upcoming
+
+	class Meta:
+		app_label = 'gather'
 
 # Create your models here.
 class Event(models.Model):
@@ -120,6 +134,9 @@ class Event(models.Model):
 	def __unicode__(self):
 		return self.title
 
+	class Meta:
+		app_label = 'gather'
+
 	def is_viewable(self, current_user):
 		# an event is viewable only if it's both live and public, or the
 		# current_user is an event admin, created the event, or is an attendee
@@ -136,7 +153,6 @@ class Event(models.Model):
 			viewable = False
 		return viewable
 
-
 def default_event_status(sender, instance, created, using, **kwargs):
 	print instance
 	print created
@@ -147,10 +163,8 @@ def default_event_status(sender, instance, created, using, **kwargs):
 		else:
 			instance.status = Event.PENDING
 post_save.connect(default_event_status, sender=Event)
-	
 
 def create_route(route_name, route_pattern, path):
-
 	mailgun_api_key = settings.MAILGUN_API_KEY
 	list_domain = settings.LIST_DOMAIN
 	# strip the initial slash 
@@ -189,6 +203,10 @@ class EventNotifications(models.Model):
 	reminders = models.BooleanField(default=True)
 	# receive weekly announcements about upcoming events? 
 	weekly = models.BooleanField(default=False)
+
+	class Meta:
+		app_label = 'gather'
+
 
 User.event_notifications = property(lambda u: EventNotifications.objects.get_or_create(user=u)[0])
 
