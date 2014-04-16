@@ -35,6 +35,7 @@ Installation
 * add to your requirements.txt file: `git+https://git@github.com/opendoor/django-gather.git`
 * re-run pip `install -r requirements.txt` (or `pip install --upgrade git+https://git@github.com/opendoor/django-gather.git` when there have been code changes to gather)
 * add `gather` to your settings.py file, under INSTALLED_APPS
+* add stub location to your settings file: `LOCATION_MODEL = 'gather.Location'`
 * do the necessary db updates: `./manage.py syncdb` (no need to migrate now because the app is new, for upgrades south migrations might be needed)
 * manually create the event notifications object for each user by iterating through all users and accessing the event_notifications attribute of each user object
 * add users as appropriate to the event_admin group (manual, for now)
