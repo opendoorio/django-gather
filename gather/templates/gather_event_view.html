@@ -16,7 +16,7 @@
 			</div>
 			<div class="modal-body">
 				<h4>We need a bit more info to keep you posted on this event. </h4> 	
-				<p><em>Already a member? <a href="{% url django.contrib.auth.views.login %}">Login instead</a></em></p>
+				<p><em>Already a member? <a href="{% url 'django.contrib.auth.views.login' %}">Login instead</a></em></p>
 				<div id="new-user-form-errors"></div>
 				<form id="new-user-form" class="form-horizontal">
 					<div class="form-group">
@@ -143,7 +143,7 @@
 		{% with event.organizers.get_query_set as organizers %}
 		<h3>Organized by 
 			{% for o in organizers %}
-			<a href="{% url user_detail o.username %}">{{ o.first_name }} {{o.last_name}}</a>{% if not forloop.last %}, {% endif %}
+			<a href="{% url 'user_detail' o.username %}">{{ o.first_name }} {{o.last_name}}</a>{% if not forloop.last %}, {% endif %}
 			{% endfor %}
 		</h3>
 		{% endwith %}
@@ -183,7 +183,7 @@
 		request = $.ajax({ 
 			data: form_data,	
 			type: "POST",
-			url: '{% url gather_rsvp_new_user location.slug event.id event.slug %}'
+			url: "{% url 'gather_rsvp_new_user' location.slug event.id event.slug %}"
 		});
 
 		request.done(function(msg) {
@@ -220,7 +220,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '{% url gather_event_approve location.slug event.id event.slug %}'
+			url: "{% url 'gather_event_approve' location.slug event.id event.slug %}"
 		});
 		request.done(function(msg) {
 			$("#event-status-area").html(msg);
@@ -239,7 +239,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '{% url gather_event_publish location.slug event.id event.slug %}',
+			url: "{% url 'gather_event_publish' location.slug event.id event.slug %}",
 		});
 
 	});
