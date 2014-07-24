@@ -272,20 +272,19 @@ def upcoming_events(request, location_slug=None):
 	return render(request, 'gather_events_list.html', {"events": events, 'current_user': current_user, 'page_title': 'Upcoming Events', 'location': location})
 
 
-def user_events(request, username, location_slug):
-	location = get_location(location_slug)
+def user_events(request, username):
 	user = User.objects.get(username=username)
 	today = timezone.now()
-	events_organized_upcoming = user.events_organized.all().filter(end__gte = today).order_by('start').filter(location=location)
-	events_attended_upcoming = user.events_attending.all().filter(end__gte = today).order_by('start').filter(location=location)
-	events_organized_past = user.events_organized.all().filter(end__lt = today).order_by('-start').filter(location=location)
-	events_attended_past = user.events_attending.all().filter(end__lt = today).order_by('-start').filter(location=location)
+	events_organized_upcoming = user.events_organized.all().filter(end__gte = today).order_by('start')
+	events_attended_upcoming = user.events_attending.all().filter(end__gte = today).order_by('start')
+	events_organized_past = user.events_organized.all().filter(end__lt = today).order_by('-start')
+	events_attended_past = user.events_attending.all().filter(end__lt = today).order_by('-start')
 	return render(request, 'gather_user_events_list.html', {
 		'events_organized_upcoming': events_organized_upcoming, 
 		'events_attended_upcoming': events_attended_upcoming, 
 		'events_organized_past': events_organized_past, 
 		'events_attended_past': events_attended_past, 
-		'current_user': user, 'page_title': 'Upcoming Events', 'location': location
+		'current_user': user, 'page_title': 'Upcoming Events', 
 	})
 
 
@@ -335,7 +334,6 @@ def email_preferences(request, username, location_slug=None):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
 	
-	print request.POST
 	u = User.objects.get(username=username)
 	notifications = u.event_notifications
 	if request.POST.get('event_reminders') == 'on':
@@ -343,11 +341,15 @@ def email_preferences(request, username, location_slug=None):
 	else:
 		notifications.reminders = False
 
-	if request.POST.get('weekly_updates') == 'on':
-		notifications.weekly = True
-	else:
-		notifications.weekly = False
+	for location in Location.objects.all():
+		weekly_updates = request.POST.get(location.slug)
+		if weekly_updates == 'on' and location not in notifications.location_weekly.all():
+			notifications.location_weekly.add(location)
+		if weekly_updates == None and location in notifications.location_weekly.all():
+			notifications.location_weekly.remove(location)
+
 	notifications.save()
+	print notifications.location_weekly.all()
 	messages.add_message(request, messages.INFO, 'Your preferences have been updated.')
 	return HttpResponseRedirect('/people/%s/' % u.username)
 
@@ -429,7 +431,10 @@ def rsvp_new_user(request, event_id, event_slug, location_slug=None):
 		new_user = form.save()
 		new_user.save()
 		notifications = new_user.event_notifications
-		notifications.weekly = weekly_updates
+		if weekly_updates:
+			# since the signup was related to a specific location we assume
+			# they wanted weekly emails about the same location
+			notifications.location_weekly.add(location)
 		notifications.save()
 
 		password = request.POST.get('password1')
@@ -523,19 +528,20 @@ def new_user_email_signup(request, location_slug=None):
 		return HttpResponseRedirect('/404')
 	print request.POST
 
+	location = get_location(location_slug)
 	# create new user
 	form = NewUserForm(request.POST)
 	if form.is_valid():
 		new_user = form.save()
 		new_user.save()
 		notifications = new_user.event_notifications
-		notifications.weekly = True
+		notifications.location_weekly.add(location)
 		notifications.save()
 
 		password = request.POST.get('password1')
 		new_user = authenticate(username=new_user.username, password=password)
 		login(request, new_user)
-		messages.add_message(request, messages.INFO, 'Thanks! We\'ll send you weekly event updates. You can update your preferences at any time on your <a href="/people/%s">profile</a> page' % new_user.username)
+		messages.add_message(request, messages.INFO, 'Thanks! We\'ll send you weekly event updates for this location. You can update your preferences at any time on your <a href="/people/%s">profile</a> page' % new_user.username)
 		return HttpResponse(status=200)
 	else:
 		errors = json.dumps({"errors": form.errors})

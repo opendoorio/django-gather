@@ -1,8 +1,7 @@
-{% extends "content-base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-
 
 <div class="row">
 	<h1>{{ page_title|title }}</h1>
@@ -32,6 +31,9 @@
 	</div>
 </div>
 
+{% empty %}
+
+<p class="lead">No upcoming events! Why not <a href="{% url 'gather_create_event' location.slug %}">propose one?</a></p>	
 {% endfor %}
 
 

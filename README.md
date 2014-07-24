@@ -41,6 +41,16 @@ Installation
 * add users as appropriate to the event_admin group (manual, for now)
 
 
+Setup
+===
+
+* requires at least one location. go to django admin and create at least one
+* location object of
+  the type you spcified in the LOCATION_MODEL setting abobe. the default would
+  be gather.Location, which is basically a stub. Use this or extend/reference
+  your own. 
+  
+
 Dependencies
 === 
 
