@@ -188,7 +188,7 @@ class EventNotifications(models.Model):
 	# send reminders on day-of the event?
 	reminders = models.BooleanField(default=True)
 	# receive weekly announcements about upcoming events? 
-	weekly = models.BooleanField(default=False)
+	location_weekly = models.ManyToManyField(settings.LOCATION_MODEL, related_name="")
 
 User.event_notifications = property(lambda u: EventNotifications.objects.get_or_create(user=u)[0])
 

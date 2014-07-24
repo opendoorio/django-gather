@@ -1,4 +1,4 @@
-{% extends "content-base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
@@ -25,7 +25,7 @@
 
 <div class="col-md-8">
 
-	<form class="form-horizontal" enctype="multipart/form-data" method="post" action="{% url gather_create_event location.slug %}">{% csrf_token %}
+	<form class="form-horizontal" enctype="multipart/form-data" method="post" action="{% url 'gather_create_event' location.slug %}">{% csrf_token %}
 		{% include "snippets/event_form_body.html" %}
 		<input id="submit-event" type="submit" class="btn btn-lg" value="Submit Event">
 	</form>

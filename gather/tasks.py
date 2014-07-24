@@ -16,6 +16,9 @@ import requests, pytz, datetime
 from django.db.models import Q
 from itertools import chain
 
+from django.db.models.loading import get_model
+Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
+
 weekday_number_to_name = {
 	0: "Monday",
 	1: "Tuesday",
@@ -115,7 +118,7 @@ def events_pending():
 	ret = {'pending': pending, 'feedback': feedback}
 	return ret
 
-def published_events_this_week_local():
+def published_events_this_week_local(location):
 	# we have to do a bunch of tomfoolery here because we want to gets events
 	# that are "this week" in this week's timezone, but dates are stored in UTC which
 	# is offset from the current timezone's hours by a certain amount. 
@@ -132,12 +135,12 @@ def published_events_this_week_local():
 	week_local_end_utc = utc_tz.normalize(week_local_end_aware.astimezone(utc_tz))
 
 	# get events happening today that are live
-	starts_this_week_local = Event.objects.filter(start__gte =
-		week_local_start_utc).filter(start__lte=week_local_end_utc).filter(status='live')
-	ends_this_week_local = Event.objects.filter(end__gte =
-		week_local_start_utc).filter(end__lte=week_local_end_utc).filter(status='live')
-	across_this_week_local = Event.objects.filter(start__lte =
-		week_local_start_utc).filter(end__gte=week_local_end_utc).filter(status='live')
+	starts_this_week_local = Event.objects.filter(location=location).filter(start__gte =
+		week_local_start_utc).filter(start__lte=week_local_end_utc).filter(status='live').filter(private=False)
+	ends_this_week_local = Event.objects.filter(location=location).filter(end__gte =
+		week_local_start_utc).filter(end__lte=week_local_end_utc).filter(status='live').filter(private=False)
+	across_this_week_local = Event.objects.filter(location=location).filter(start__lte =
+		week_local_start_utc).filter(end__gte=week_local_end_utc).filter(status='live').filter(private=False)
 
 	events_this_week_local = list(set(chain(starts_this_week_local, ends_this_week_local, across_this_week_local)))
 	return events_this_week_local
@@ -157,12 +160,12 @@ def published_events_today_local():
 	today_local_end_utc = utc_tz.normalize(today_local_end_aware.astimezone(utc_tz))
 
 	# get events happening today that are live
-	starts_today_local = Event.objects.filter(start__gte =
-		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
-	ends_today_local = Event.objects.filter(end__gte =
-		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live')
-	across_today_local = Event.objects.filter(start__lte =
-		today_local_start_utc).filter(end__gte=today_local_end_utc).filter(status='live')
+	starts_today_local = Event.objects.filter(location=location).filter(start__gte =
+		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live').filter(private=False)
+	ends_today_local = Event.objects.filter(location=location).filter(end__gte =
+		today_local_start_utc).filter(end__lte=today_local_end_utc).filter(status='live').filter(private=False)
+	across_today_local = Event.objects.filter(location=location).filter(start__lte =
+		today_local_start_utc).filter(end__gte=today_local_end_utc).filter(status='live').filter(private=False)
 
 	events_today_local = list(set(chain(starts_today_local, ends_today_local, across_today_local)))
 	return events_today_local
@@ -193,19 +196,22 @@ def events_today_reminder():
 @shared_task
 @periodic_task(run_every=crontab(day_of_week='sun', hour=4, minute=30))
 def weekly_upcoming_events():
-	events_this_week = published_events_this_week_local()
-	if len(events_this_week) == 0:
-		print 'no events this week; skipping email notification'
-		return
-	print events_this_week
-	# for each event, 
-	#	for each attendee or organizer
-	#		if they want reminders, append this event to a list of reminders for today, for that person. 
-	weekly_notifications_on = EventNotifications.objects.filter(weekly=True)
-	remindees = [notify.user for notify in weekly_notifications_on]
-	
-	print remindees
-	for user in remindees:
-		weekly_reminder_email(user, events_this_week)
+	locations = Location.objects.all()
+	for location in locations:
+		events_this_week_at_location = published_events_this_week_local(location)
+		if len(events_this_week_at_location) == 0:
+			print 'no events this week at %s; skipping email notification' % location.name
+			continue
+		print events_this_week_at_location
+		# for each event, 
+		#	for each attendee or organizer
+		#		if they want reminders, append this event to a list of reminders for today, for that person. 
+		weekly_notifications_on = EventNotifications.objects.filter(location_weekly = location)
+		print weekly_notifications_on
+		remindees_for_location = [notify.user for notify in weekly_notifications_on]
+		
+		print remindees_for_location
+		for user in remindees_for_location:
+			weekly_reminder_email(user, events_this_week_at_location)
 
 

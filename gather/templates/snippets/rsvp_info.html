@@ -38,7 +38,7 @@
 <div class="attendees-list">
 	{% for u in event.attendees.all %}
 		{% if user.is_authenticated %}
-		<div class="attendees-item"><a href="{% url user_detail u.username %}">{{u.first_name}} {{u.last_name}}</a></div>
+		<div class="attendees-item"><a href="{% url 'user_detail' u.username %}">{{u.first_name}} {{u.last_name}}</a></div>
 		{% else %}
 			<div class="attendees-item">{{u.first_name}} {{u.last_name}}</div>
 		{% endif %}
@@ -62,7 +62,7 @@
 					'csrfmiddlewaretoken': '{{ csrf_token }}'
 				}, 
 				type: "POST",
-				url: '{% url gather_rsvp_event location.slug event.id event.slug %}'
+				url: '{% url "gather_rsvp_event" location.slug event.id event.slug %}'
 			});
 
 			request.done(function(msg) {
@@ -83,7 +83,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			}, 
 			type: "POST",
-				url: '{% url gather_rsvp_cancel location.slug event.id event.slug %}'
+				url: '{% url "gather_rsvp_cancel" location.slug event.id event.slug %}'
 		});
 
 		request.done(function(msg) { // on success..
