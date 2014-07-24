@@ -1,6 +1,7 @@
 include LICENSE
 include README.md
 
+recursive-include gather *.py
 recursive-include gather/templates *
 
 
