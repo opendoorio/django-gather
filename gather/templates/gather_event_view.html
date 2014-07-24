@@ -183,7 +183,7 @@
 		request = $.ajax({ 
 			data: form_data,	
 			type: "POST",
-			url: '{% url "gather_rsvp_new_user" location.slug event.id event.slug %}'
+			url: "{% url 'gather_rsvp_new_user' location.slug event.id event.slug %}"
 		});
 
 		request.done(function(msg) {
@@ -220,7 +220,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '{% url "gather_event_approve" location.slug event.id event.slug %}'
+			url: "{% url 'gather_event_approve' location.slug event.id event.slug %}"
 		});
 		request.done(function(msg) {
 			$("#event-status-area").html(msg);
@@ -239,7 +239,7 @@
 				'csrfmiddlewaretoken': '{{ csrf_token }}'
 			},	
 			type: "POST",
-			url: '{% url "gather_event_publish" location.slug event.id event.slug %}',
+			url: "{% url 'gather_event_publish' location.slug event.id event.slug %}",
 		});
 
 	});

@@ -7,6 +7,12 @@
 	<h1>{{ page_title|title }}</h1>
 </div>
 
+{% block createlink %}
+<div id="event_create_link">
+	[ <a href="{% url 'gather_create_event' location.slug %}">Add Event</a> ]
+</div>
+{% endblock %}
+
 {% for event in events %}
 
 <div class="row">
