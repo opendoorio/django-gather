@@ -4,6 +4,7 @@ from south.db import db
 from south.v2 import DataMigration
 from django.db import models
 from django.conf import settings
+import os
 
 class Migration(DataMigration):
 
@@ -12,12 +13,18 @@ class Migration(DataMigration):
         # Note: Don't use "from appname.models import ModelName".
         # Use orm.ModelName to refer to models in this application,
         # and orm['appname.ModelName'] for models in other applications.
+        try:
+            os.mkdir(os.path.join(settings.MEDIA_ROOT, "events"), 0755)
+        except:
+            pass
+  
         for event in orm['gather.Event'].objects.all():
-
-            newpath = "events/%s" % event.image.split()[-1]
-            # print newpath
-            os.rename(os.path.join(settings.MEDIA_ROOT, event.image), os.path.join(settings.MEDIA_ROOT, newpath))
-            event.image = newpath # WRONG!
+            oldpath = event.image.path
+            #print "oldpath: %s" % oldpath
+            newpath = "events/%s" % os.path.split(oldpath)[-1]
+            print "newpath: %s" % newpath
+            os.rename(oldpath, os.path.join(settings.MEDIA_ROOT, newpath))
+            event.image = newpath
             event.save()
 
     def backwards(self, orm):
