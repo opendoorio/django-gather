@@ -141,7 +141,7 @@ class Event(models.Model):
 		# an event is viewable only if it's both live and public, or the
 		# current_user is an event admin, created the event, or is an attendee
 		# or organizer. 
-		if (current_user) and (current_user in self.admin.users.all()):
+		if (self.admin and current_user) and (current_user in self.admin.users.all()):
 			is_event_admin = True
 		else:
 			is_event_admin = False
