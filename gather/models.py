@@ -218,4 +218,6 @@ def add_user_event_notifications(sender, instance, created, using, **kwargs):
 	instance.event_notifications
 	return
 
-post_save.connect(add_user_event_notifications, sender=User)
+# I don't think this is needed because of the get_or_create we are using.
+# This causes problems when we dump and load data so I'm turning it off --JLS
+# post_save.connect(add_user_event_notifications, sender=User)
