@@ -15,11 +15,11 @@ class EventAdminGroup(models.Model):
 
 	def __unicode__(self):
 		return self.location.name + " Admin Group"
-	
+
 	class Meta:
 		app_label = 'gather'
-	
-	
+
+
 
 class EventSeries(models.Model):
 	''' Events may be associated with a series. A series has a name and
@@ -38,7 +38,7 @@ class Location(models.Model):
 	Most people will write their own location model (either extending this one,
 	or using a model from another app). Django-gather is designed only to rely
 	on the 'slug' Location field, and the ability to associate events with a
-	location object (ie, a primary key). 
+	location object (ie, a primary key).
 	django-gather requires settings.py to include a setting named
 	LOCATION_MODEL. The default is LOCATION_MODEL = gather.Location, which is
 	this model."
@@ -57,7 +57,7 @@ def event_img_upload_to(instance, filename):
 	# rename file to random string
 	filename = "%s.%s" % (uuid.uuid4(), ext.lower())
 
-	upload_path = "data/events/%s/" % instance.slug
+	upload_path = "events/"
 	upload_abs_path = os.path.join(settings.MEDIA_ROOT, upload_path)
 	if not os.path.exists(upload_abs_path):
 		os.makedirs(upload_abs_path)
@@ -67,7 +67,7 @@ def event_img_upload_to(instance, filename):
 class EventManager(models.Manager):
 	def upcoming(self, upto=None, current_user=None, location=None):
 		# return the events happening today or in the future, returning up to
-		# the number of events specified in the 'upto' argument. 
+		# the number of events specified in the 'upto' argument.
 		today = timezone.now()
 		print today
 
@@ -110,7 +110,7 @@ class Event(models.Model):
 	slug = models.CharField(max_length=60, help_text="This will be auto-suggested based on the event title, but feel free to customize it.", unique=True)
 	description = models.TextField(help_text="Basic HTML markup is supported for your event description.")
 	image = models.ImageField(upload_to=event_img_upload_to)
-	attendees = models.ManyToManyField(User, related_name="events_attending", blank=True, null=True)  
+	attendees = models.ManyToManyField(User, related_name="events_attending", blank=True, null=True)
 	notifications = models.BooleanField(default = True)
 	# where, site, place, venue
 	where = models.CharField(verbose_name = 'Where will the event be held?', max_length=500, help_text="Either a specific room at this location or an address if elsewhere")
@@ -118,13 +118,13 @@ class Event(models.Model):
 	organizers = models.ManyToManyField(User, related_name="events_organized", blank=True, null=True)
 	organizer_notes = models.TextField(blank=True, null=True, help_text="These will only be visible to other organizers")
 	limit = models.IntegerField(default=0, help_text="Specify a cap on the number of RSVPs, or 0 for no limit.", blank=True)
-	# public events can be seen by anyone, private events can only be seen by organizers and attendees. 
-	private = models.BooleanField(default=False, help_text="Private events will only be seen by organizers, attendees, and those who have the link. It will not be displayed in the public listing.") 
+	# public events can be seen by anyone, private events can only be seen by organizers and attendees.
+	private = models.BooleanField(default=False, help_text="Private events will only be seen by organizers, attendees, and those who have the link. It will not be displayed in the public listing.")
 	status = models.CharField(choices = event_statuses, default=PENDING, max_length=200, verbose_name='Review Status', blank=True)
 	endorsements = models.ManyToManyField(User, related_name="events_endorsed", blank=True, null=True)
 	# the location field is optional but lets you associate an event with a
 	# specific location object that is also managed by this software. a single
-	# location or multiple locations can be defined. 
+	# location or multiple locations can be defined.
 	location = models.ForeignKey(settings.LOCATION_MODEL)
 	series = models.ForeignKey(EventSeries, related_name='events', blank=True, null=True)
 	admin = models.ForeignKey(EventAdminGroup, related_name='events')
@@ -145,8 +145,8 @@ class Event(models.Model):
 			is_event_admin = True
 		else:
 			is_event_admin = False
-		if ((self.status == 'live' and self.private == False) or (is_event_admin or 
-				current_user == self.creator or current_user in self.organizers.all() or 
+		if ((self.status == 'live' and self.private == False) or (is_event_admin or
+				current_user == self.creator or current_user in self.organizers.all() or
 				current_user in self.attendees.all())):
 			viewable = True
 		else:
@@ -167,7 +167,7 @@ post_save.connect(default_event_status, sender=Event)
 def create_route(route_name, route_pattern, path):
 	mailgun_api_key = settings.MAILGUN_API_KEY
 	list_domain = settings.LIST_DOMAIN
-	# strip the initial slash 
+	# strip the initial slash
 	forward_url = os.path.join(list_domain, path)
 	forward_url = "https://" + forward_url
 	print forward_url
@@ -176,8 +176,8 @@ def create_route(route_name, route_pattern, path):
 	print expression
 	forward_url = "forward('%s')" % forward_url
 	print forward_url
-	return requests.post( "https://api.mailgun.net/v2/routes", 
-			auth=("api", mailgun_api_key), 
+	return requests.post( "https://api.mailgun.net/v2/routes",
+			auth=("api", mailgun_api_key),
 			data={"priority": 1,
 				"description": route_name,
 				# the route pattern is a string but still needs to be quoted
@@ -201,7 +201,7 @@ class EventNotifications(models.Model):
 	user = models.OneToOneField(User, related_name='event_notifications')
 	# send reminders on day-of the event?
 	reminders = models.BooleanField(default=True)
-	# receive weekly announcements about upcoming events? 
+	# receive weekly announcements about upcoming events?
 	location_weekly = models.ManyToManyField(settings.LOCATION_MODEL, related_name="")
 
 	class Meta:
@@ -214,12 +214,10 @@ User.event_notifications = property(lambda u: EventNotifications.objects.get_or_
 # object automatically for new users
 def add_user_event_notifications(sender, instance, created, using, **kwargs):
 	# just accessing the field will create the object, since the field is
-	# defined with get_or_create, above. 
+	# defined with get_or_create, above.
 	instance.event_notifications
 	return
-	
-post_save.connect(add_user_event_notifications, sender=User)
 
-
-
-
+# I don't think this is needed because of the get_or_create we are using.
+# This causes problems when we dump and load data so I'm turning it off --JLS
+# post_save.connect(add_user_event_notifications, sender=User)
