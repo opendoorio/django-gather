@@ -6,7 +6,6 @@ from django.template import Context
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, HttpResponseRedirect
 from gather.models import Event
-from gather.views import get_location
 import requests
 import logging
 import json
@@ -177,8 +176,7 @@ def event_message(request, location_slug=None):
 
 	# find the event organizers and admins
 	organizers = event.organizers.all()
-	location = get_location(location_slug)
-	location_event_admin = EventAdminGroup.objects.get(location=location)
+	location_event_admin = EventAdminGroup.objects.get(location=event.location)
 	admins = location_event_admin.users.all()
 
 	# Build our bcc list 
@@ -201,7 +199,7 @@ def event_message(request, location_slug=None):
 		subject = prefix + subject
 
 	# Add in footer
-	event_url = urlresolvers.reverse('gather_view_event', args=(location.slug, event.id, event.slug))
+	event_url = urlresolvers.reverse('gather_view_event', args=(event.location.slug, event.id, event.slug))
 	footer_msg = "You are receving this email because you are one of the organizers or an event admin at this location. Visit this event online at %s" % event_url
 	body_plain = body_plain + "\n\n-------------------------------------------\n" + footer_msg
 	body_html = body_html + "<br><br>-------------------------------------------<br>" + footer_msg
