@@ -4,7 +4,7 @@ from django.template.loader import get_template
 from django.template import Context
 import requests
 
-def new_event_notification(event):
+def new_event_notification(event, location):
 	# notify the event admins
 	admin_group = event.admin
 	print 'generating new event notification'
@@ -12,14 +12,14 @@ def new_event_notification(event):
 	event_short_title = event.title[0:50]
 	if len(event.title) > 50:
 		event_short_title = event_short_title + "..."
-	subject = settings.EMAIL_SUBJECT_PREFIX + "A new event has been created: %s" % event_short_title
-	from_address = settings.DEFAULT_FROM_EMAIL
+	subject = '[' + location.email_subject_prefix + ']' + " A new event has been created: %s" % event_short_title
+	from_address = location.from_email()
 	plaintext = get_template('emails/new_event_notify.txt')
 	c = Context({
 		'event': event,
 		'creator': event.creator,
 		'domain' : Site.objects.get_current().domain,
-		'location_name': settings.LOCATION_NAME,
+		'location_name': location.name,
 	})
 	body_plain = plaintext.render(c)
 
@@ -37,16 +37,16 @@ def new_event_notification(event):
 	print 'mailgun responded with:'
 	print resp.text
 
-def event_approved_notification(event):
+def event_approved_notification(event, location):
 	print 'generating email to notify organizers'
 	recipients = [organizer.email for organizer in event.organizers.all()]
-	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is ready to be published"
-	from_address = settings.DEFAULT_FROM_EMAIL
+	subject = '[' + location.email_subject_prefix + ']' + " Your event is ready to be published"
+	from_address = location.from_email()
 	plaintext = get_template('emails/event_approved_notify.txt')
 	c = Context({
 		'event': event,
 		'domain' : Site.objects.get_current().domain,
-		'location_name': settings.LOCATION_NAME,
+		'location_name': location.name,
 	})
 	body_plain = plaintext.render(c)
 
@@ -65,20 +65,19 @@ def event_approved_notification(event):
 	print resp.text
 
 
-def event_published_notification(event):
+def event_published_notification(event, location):
 	print 'generating email to notify organizers that event was published'
 	recipients = [organizer.email for organizer in event.organizers.all()]
 	event_short_title = event.title[0:50]
 	if len(event.title) > 50:
 		event_short_title = event_short_title + "..."
-	subject = settings.EMAIL_SUBJECT_PREFIX + "Your event is now live: %s" % event_short_title
-	from_address = settings.DEFAULT_FROM_EMAIL
+	subject = '[' + location.email_subject_prefix + ']' + " Your event is now live: %s" % event_short_title
+	from_address = location.from_email()
 	plaintext = get_template('emails/event_published_notify.txt')
 	c = Context({
 		'event': event,
 		'domain' : Site.objects.get_current().domain,
-		'location_name': settings.LOCATION_NAME,
-		'event_guide': Site.objects.get_current().domain + "/events/guide/"
+		'location_name': location.name,
 	})
 	body_plain = plaintext.render(c)
 

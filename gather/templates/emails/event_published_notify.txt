@@ -6,8 +6,6 @@ You can view or edit your event at http://{{domain}}/events/{{event.id}}/{{event
 
 This is a {% if event.private %}private{% else %}public{% endif %} event. Public events are open and visible to our extended community, whereas private events are visible only to people in the house (so they know what's going on) and to those with the link. 
 
-Let us know any questions. As a reminder, our events guide is located at {{ event_guide }}
-
-Thanks for playing with us,
+Let us know any questions!
 {{ location_name }}
 

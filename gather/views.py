@@ -89,7 +89,7 @@ def create_event(request, location_slug=None):
 			event.attendees.add(current_user)
 			event.save()
 
-			new_event_notification(event)
+			new_event_notification(event, location)
 
 			messages.add_message(request, messages.INFO, 'The event has been created.')
 			try:
@@ -490,7 +490,7 @@ def event_approve(request, event_id, event_slug, location_slug=None):
 	msg_success = "Success! The event has been approved."
 
 	# notify the event organizers
-	event_approved_notification(event)
+	event_approved_notification(event, location)
 
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
@@ -518,7 +518,7 @@ def event_publish(request, event_id, event_slug, location_slug=None):
 	msg_success = "Success! The event has been published."
 
 	# notify the event organizers and admins
-	event_published_notification(event)
+	event_published_notification(event, location)
 
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
