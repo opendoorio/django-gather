@@ -8,6 +8,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from gather.models import Event
 import requests
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
