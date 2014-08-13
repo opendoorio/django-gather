@@ -6,6 +6,7 @@ from django.template import Context
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, HttpResponseRedirect
 from gather.models import Event
+from gather.views import get_location
 import requests
 import logging
 import json
