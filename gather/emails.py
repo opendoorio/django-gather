@@ -18,7 +18,7 @@ def new_event_notification(event, location):
 	c = Context({
 		'event': event,
 		'creator': event.creator,
-		'domain' : Site.objects.get_current().domain,
+		'location': location,
 		'location_name': location.name,
 	})
 	body_plain = plaintext.render(c)
