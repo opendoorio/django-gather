@@ -153,7 +153,7 @@ def event_message(request, location_slug=None):
 	except:
 		pass
 	if not event:
-		logger.warn("Event (%s) not found.  Exiting quietly." % event_id)
+		logger.warn("Event (%s) not found.  Exiting quietly." % alias)
 		return HttpResponse(status=200)
 
 	# Do some sanity checkint so we don't mailbomb everyone
