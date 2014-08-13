@@ -527,7 +527,6 @@ def event_publish(request, event_id, event_slug, location_slug=None):
 
 	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
-
 def new_user_email_signup(request, location_slug=None):
 	if not request.method == 'POST':
 		return HttpResponseRedirect('/404')
@@ -553,81 +552,3 @@ def new_user_email_signup(request, location_slug=None):
 		return HttpResponse(json.dumps(errors))
 
 	return HttpResponse(status=500); 
-
-############################################
-########### EMAIL ENDPOINTS ################
-
-@csrf_exempt
-def event_message(request, location_slug=None):
-	''' new messages sent to event email addresses are posed to this view '''
-	if not request.method == 'POST':
-		return HttpResponseRedirect('/404')
-	
-	print request.POST
-	recipient = request.POST.get('recipient')
-	from_address = request.POST.get('from')
-	sender = request.POST.get('sender')
-	print 'sender is: %s' % sender
-	
-	subject = request.POST.get('subject')
-	body_plain = request.POST.get('body-plain')
-	body_html = request.POST.get('body-html')
-
-	# get the event info and make sure the event exists
-	# we know that the route is always in the form eventXX, where XX is the
-	# event id.
-	print recipient
-	alias = recipient.split('@')[0]
-	event_id = int(alias[5:])
-	print event_id
-	event = Event.objects.get(id=event_id)
-
-	# find the event organizers and admins
-	organizers = event.organizers.all()
-	location = get_location(location_slug)
-	location_event_admin = EventAdminGroup.objects.get(location=location)
-	admins = location_event_admin.users.all()
-
-	# bcc list 
-	bcc_list = []
-	for organizer in organizers:
-		if organizer.email not in bcc_list:
-			bcc_list.append(organizer.email)
-	for admin in admins:
-		if admin.email not in bcc_list:
-			bcc_list.append(admin.email)
-	print bcc_list
-
-	# prefix subject
-	if subject.find('[Event Discussion') < 0:
-		prefix = '[Event Discussion: %s] ' % event.slug[0:30]
-		subject = prefix + subject
-	print subject
-
-	# add in footer
-	domain = Site.objects.get_current().domain
-	event_url = domain + '/events/%d/%s' % (event.id, event.slug)
-	print event_url
-	footer = '''\n\n-------------------------------------------\nYou are receving this email because you are one of the organizers or an event admin at this location. Visit this event online at %s.'''% event_url
-	body_plain = body_plain + footer
-	body_html = body_html + footer
-
-	# send the message 
-	mailgun_api_key = settings.MAILGUN_API_KEY
-	list_domain = settings.LIST_DOMAIN
-	resp = requests.post(
-	    "https://api.mailgun.net/v2/%s/messages" % list_domain,
-	    auth=("api", mailgun_api_key),
-	    data={"from": from_address,
-	          "to": [recipient, ],
-			  "bcc": bcc_list,
-	          "subject": subject,
-	          "text": body_plain,
-			  "html": body_html
-		}
-	)
-	print resp.text
-
-	return HttpResponse(status=200)
-
-
