@@ -30,12 +30,12 @@ weekday_number_to_name = {
 }
 
 
-def send_events_list(user, event_list):
+def send_events_list(user, event_list, location):
 	domain = 'https://'+Site.objects.get_current().domain
 	profile_url = domain + '/people/%s/' % user.username
 	footer = 'You are receiving this email because your preferences for event reminders are on. To turn them off, visit %s' % profile_url
-	sender = settings.DEFAULT_FROM_EMAIL
-	subject = settings.EMAIL_SUBJECT_PREFIX + 'Reminder of your events today'
+	sender = location.from_email()
+	subject = '[' + location.email_subject_prefix + ']' + 'Reminder of your events today'
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
 	day_of_week = weekday_number_to_name[today_local.weekday()]
@@ -43,7 +43,8 @@ def send_events_list(user, event_list):
 	c = Context({
 			'user': user,
 			'events': event_list,
-			'location_name': settings.LOCATION_NAME,
+			'location_name': location.name,
+			'location', location,
 			'domain': domain,
 			"footer": footer,
 			"day_of_week": day_of_week
@@ -71,8 +72,8 @@ def weekly_reminder_email(user, event_list, location):
 	tomorrow_local = today_local + datetime.timedelta(days=1)
 	week_name = tomorrow_local.strftime("%B %d, %Y")
 	footer = 'You are receiving this email because you requested weekly updates of upcoming events from %s. To turn them off, visit %s' % (location_name, profile_url)
-	sender = settings.DEFAULT_FROM_EMAIL
-	subject = settings.EMAIL_SUBJECT_PREFIX + 'Upcoming events for the week of %s' % week_name
+	sender = location.from_email()
+	subject = '[' + location.email_subject_prefix + ']' + 'Upcoming events for the week of %s' % week_name
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
 	plaintext = get_template('emails/events_this_week.txt')
@@ -82,6 +83,7 @@ def weekly_reminder_email(user, event_list, location):
 			'user': user,
 			'events': event_list,
 			'location_name': location_name,
+			'location', location,
 			'domain': domain,
 			"footer": footer,
 			"week_name": week_name
@@ -92,6 +94,7 @@ def weekly_reminder_email(user, event_list, location):
 			'user': user,
 			'events': event_list,
 			'location_name': location_name,
+			'location', location,
 			'domain': domain,
 			"footer": footer,
 			"week_name": week_name
@@ -191,7 +194,7 @@ def events_today_reminder(location):
 				reminders_per_person[user] = reminders_this_person
 	
 	for user, events_today in reminders_per_person.iteritems():
-		send_events_list(user, events_today)
+		send_events_list(user, events_today, location)
 	
 @shared_task
 @periodic_task(run_every=crontab(day_of_week='sun', hour=4, minute=30))
