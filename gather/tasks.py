@@ -145,7 +145,7 @@ def published_events_this_week_local(location):
 	events_this_week_local = list(set(chain(starts_this_week_local, ends_this_week_local, across_this_week_local)))
 	return events_this_week_local
 
-def published_events_today_local():
+def published_events_today_local(location):
 	# we have to do a bunch of tomfoolery here because we want to gets events
 	# that are "today" in today's timezone, but dates are stored in UTC which
 	# is offset from the current timezone's hours by a certain amount. 
