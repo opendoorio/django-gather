@@ -191,6 +191,7 @@ def event_message(request, location_slug=None):
 
 	# Make sure this person can post to our list
 	if not sender in bcc_list:
+		# TODO - This shoud possibly send a response so they know they were blocked
 		logger.warn("Sender (%s) not allowed.  Exiting quietly." % sender)
 		return HttpResponse(status=200)
 	bcc_list.remove(sender)
