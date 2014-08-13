@@ -111,16 +111,17 @@ def create_route(route_name, route_pattern, path):
 			}
 	)
 
-def create_event_email(sender, instance, created, using, **kwargs):
-	if created == True:
-		# XXX TODO should probably hash the ID or name of the event so we're
-		# not info leaking here, if we care?
-		route_pattern = "event%d" % instance.id
-		route_name = 'Event %d' % instance.id
-		path = "events/message/"
-		resp = create_route(route_name, route_pattern, path)
-		print resp.text
-post_save.connect(create_event_email, sender=Event)
+# TODO - We are goign to try and not create new routes
+#def create_event_email(sender, instance, created, using, **kwargs):
+#	if created == True:
+#		# XXX TODO should probably hash the ID or name of the event so we're
+#		# not info leaking here, if we care?
+#		route_pattern = "event%d" % instance.id
+#		route_name = 'Event %d' % instance.id
+#		path = "events/message/"
+#		resp = create_route(route_name, route_pattern, path)
+#		print resp.text
+#post_save.connect(create_event_email, sender=Event)
 
 ############################################
 ########### EMAIL ENDPOINTS ################
@@ -137,6 +138,17 @@ def event_message(request, location_slug=None):
 	subject = request.POST.get('subject')
 	body_plain = request.POST.get('body-plain')
 	body_html = request.POST.get('body-html')
+	
+	# get the event info and make sure the event exists
+	# we know that the route is always in the form eventXX, where XX is the
+	# event id.
+	alias = recipient.split('@')[0]
+	event_id = int(alias[5:])
+	logger.debug("event_message: event_id=%s" % event_id)
+	event = Event.objects.get(id=event_id)
+	if not event:
+		logger.warn("Event (%s) not found.  Exiting quietly." % event_id)
+		return HttpResponse(status=200)
 
 	# Do some sanity checkint so we don't mailbomb everyone
 	header_txt = request.POST.get('message-headers')
@@ -153,14 +165,6 @@ def event_message(request, location_slug=None):
 		logger.info('message appears to be auto-submitted. reject silently')
 		return HttpResponse(status=200)
 
-	# get the event info and make sure the event exists
-	# we know that the route is always in the form eventXX, where XX is the
-	# event id.
-	alias = recipient.split('@')[0]
-	event_id = int(alias[5:])
-	logger.debug("event_message: event_id=%s" % event_id)
-	event = Event.objects.get(id=event_id)
-
 	# find the event organizers and admins
 	organizers = event.organizers.all()
 	location = get_location(location_slug)
@@ -175,6 +179,11 @@ def event_message(request, location_slug=None):
 	for admin in admins:
 		if admin.email not in bcc_list:
 			bcc_list.append(admin.email)
+
+	# Make sure this person can post to our list
+	if not from_address in bcc_list:
+		logger.warn("From address (%s) not allowed.  Exiting quietly." % from_address)
+		return HttpResponse(status=200)
 
 	# prefix subject
 	if subject.find('[Event Discussion') < 0:
