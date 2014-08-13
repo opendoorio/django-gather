@@ -4,6 +4,7 @@ from django.conf import settings
 from django.template.loader import get_template
 from django.template import Context
 from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse, HttpResponseRedirect
 import requests
 import logging
 
