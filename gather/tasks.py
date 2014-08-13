@@ -62,10 +62,10 @@ def send_events_list(user, event_list):
 	)
 	print resp.text
 
-def weekly_reminder_email(user, event_list):
+def weekly_reminder_email(user, event_list, location):
 	domain = 'https://'+Site.objects.get_current().domain
 	profile_url = domain + '/people/%s/' % user.username
-	location_name = settings.LOCATION_NAME
+	location_name = location.name
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
 	tomorrow_local = today_local + datetime.timedelta(days=1)
@@ -196,6 +196,7 @@ def events_today_reminder(location):
 @shared_task
 @periodic_task(run_every=crontab(day_of_week='sun', hour=4, minute=30))
 def weekly_upcoming_events():
+	# gets a list of events to send reminders about *for all locations* one by one. 
 	locations = Location.objects.all()
 	for location in locations:
 		events_this_week_at_location = published_events_this_week_local(location)
@@ -212,6 +213,6 @@ def weekly_upcoming_events():
 		
 		print remindees_for_location
 		for user in remindees_for_location:
-			weekly_reminder_email(user, events_this_week_at_location)
+			weekly_reminder_email(user, events_this_week_at_location, location)
 
 
