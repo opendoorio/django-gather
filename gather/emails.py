@@ -193,6 +193,7 @@ def event_message(request, location_slug=None):
 	if not sender in bcc_list:
 		logger.warn("Sender (%s) not allowed.  Exiting quietly." % sender)
 		return HttpResponse(status=200)
+	bcc_list.remove(sender)
 
 	# prefix subject
 	if subject.find('[Event Discussion') < 0:
