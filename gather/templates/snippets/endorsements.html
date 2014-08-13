@@ -1,3 +1,4 @@
+{% load staticfiles %}
 {% if current_user not in endorsements %}
 	<span id="heart-endorse" class="glyphicon glyphicon-heart-empty"></span> 
 {% else %}
@@ -20,7 +21,7 @@
 	{{ endorsements|length }} 
 {% endif %}
 
-<script src="/media/js/jquery-1.8.2.js"></script>
+<script src="{% static 'js/jquery-1.8.2.js' %}"></script>
 <script>
 	$("#heart-endorse").click(function(e) {
 		request = $.ajax({ 
