@@ -16,7 +16,7 @@ from django.core.mail import EmailMultiAlternatives
 import requests, pytz, datetime
 from django.db.models import Q
 from itertools import chain
-import emails
+import gather.emails
 
 from django.db.models.loading import get_model
 Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
