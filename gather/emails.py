@@ -187,10 +187,11 @@ def event_message(request, location_slug=None):
 	for admin in admins:
 		if admin.email not in bcc_list:
 			bcc_list.append(admin.email)
+	logger.debug("BCC List: %s" % bcc_list)
 
 	# Make sure this person can post to our list
-	if not from_address in bcc_list:
-		logger.warn("From address (%s) not allowed.  Exiting quietly." % from_address)
+	if not sender in bcc_list:
+		logger.warn("Sender (%s) not allowed.  Exiting quietly." % sender)
 		return HttpResponse(status=200)
 
 	# prefix subject
