@@ -111,10 +111,10 @@ def weekly_reminder_email(user, event_list):
 	)
 	print resp.text
 
-def events_pending():
+def events_pending(location):
 	# events seeking feeddback and waiting for review
-	pending = Event.objects.filter(start__gt = timezone.now()).filter(status='waiting for approval')
-	feedback = Event.objects.filter(start__gt = timezone.now()).filter(status='seeking feedback')
+	pending = Event.objects.filter(location=location).filter(start__gt = timezone.now()).filter(status='waiting for approval')
+	feedback = Event.objects.filter(location=location).filter(start__gt = timezone.now()).filter(status='seeking feedback')
 	ret = {'pending': pending, 'feedback': feedback}
 	return ret
 
@@ -172,9 +172,9 @@ def published_events_today_local(location):
 
 @shared_task
 @periodic_task(run_every=crontab(hour=4, minute=35))
-def events_today_reminder():
+def events_today_reminder(location):
 	
-	events_today_local = published_events_today_local()
+	events_today_local = published_events_today_local(location)
 	if len(events_today_local) == 0:
 		print 'no events today!'
 		return
