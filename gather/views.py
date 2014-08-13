@@ -24,6 +24,9 @@ from django.template import Context
 from django.core.urlresolvers import reverse
 from django.db.models.loading import get_model
 from gather.emails import new_event_notification, event_approved_notification, event_published_notification
+import logging
+
+logger = logging.getLogger(__name__)
 
 Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
 
@@ -51,6 +54,8 @@ def event_guide(request, location_slug=None):
 def create_event(request, location_slug=None):
 	location = get_location(location_slug)
 	current_user = request.user
+	logger.debug("create_event: location:%s, user:%s" % (location, current_user))
+
 	# if the user doesn't have a proper profile, then make sure they extend it first
 	# TODO FIXME This is a direct dependency on an external app (the core app where the UserProfile model lives) 
 	print current_user.id
@@ -72,7 +77,7 @@ def create_event(request, location_slug=None):
 		is_event_admin = False
 
 	if request.method == 'POST':
-		print request.POST
+		logger.debug("create_event: POST=%s" % request.POST)
 		form = EventForm(request.POST, request.FILES)
 		if form.is_valid():
 			event = form.save(commit=False)
