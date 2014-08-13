@@ -44,7 +44,7 @@ def send_events_list(user, event_list, location):
 			'user': user,
 			'events': event_list,
 			'location_name': location.name,
-			'location', location,
+			'location': location,
 			'domain': domain,
 			"footer": footer,
 			"day_of_week": day_of_week
@@ -83,7 +83,7 @@ def weekly_reminder_email(user, event_list, location):
 			'user': user,
 			'events': event_list,
 			'location_name': location_name,
-			'location', location,
+			'location': location,
 			'domain': domain,
 			"footer": footer,
 			"week_name": week_name
@@ -94,7 +94,7 @@ def weekly_reminder_email(user, event_list, location):
 			'user': user,
 			'events': event_list,
 			'location_name': location_name,
-			'location', location,
+			'location': location,
 			'domain': domain,
 			"footer": footer,
 			"week_name": week_name
