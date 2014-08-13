@@ -58,7 +58,7 @@ def event_approved_notification(event, location):
 	c = Context({
 		'event': event,
 		'domain' : Site.objects.get_current().domain,
-		'location_name': location.name,
+		'location': location,
 	})
 	body_plain = plaintext.render(c)
 	mailgun_data={"from": from_address,
@@ -80,7 +80,7 @@ def event_published_notification(event, location):
 	c = Context({
 		'event': event,
 		'domain' : Site.objects.get_current().domain,
-		'location_name': location.name,
+		'location': location,
 	})
 	body_plain = plaintext.render(c)
 	mailgun_data={"from": from_address,
