@@ -212,7 +212,7 @@ def event_message(request, location_slug=None):
 		"bcc": bcc_list,
 		"subject": subject,
 		"text": body_plain,
-		"html": body_html
+		"html": body_html,
 		"h:Reply-To": recipient,
 		"h:List-Id": recipient,
 		"h:Precedence": "list",
