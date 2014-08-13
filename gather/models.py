@@ -7,7 +7,6 @@ from django.db.models.signals import post_save
 import requests
 from django.utils import timezone
 
-
 class EventAdminGroup(models.Model):
 	''' Define admininstrative groups per location.'''
 	location = models.ForeignKey(settings.LOCATION_MODEL, unique=True)
@@ -18,8 +17,6 @@ class EventAdminGroup(models.Model):
 
 	class Meta:
 		app_label = 'gather'
-
-
 
 class EventSeries(models.Model):
 	''' Events may be associated with a series. A series has a name and
@@ -62,7 +59,6 @@ def event_img_upload_to(instance, filename):
 	if not os.path.exists(upload_abs_path):
 		os.makedirs(upload_abs_path)
 	return os.path.join(upload_path, filename)
-
 
 class EventManager(models.Manager):
 	def upcoming(self, upto=None, current_user=None, location=None):
@@ -164,39 +160,6 @@ def default_event_status(sender, instance, created, using, **kwargs):
 			instance.status = Event.PENDING
 post_save.connect(default_event_status, sender=Event)
 
-def create_route(route_name, route_pattern, path):
-	mailgun_api_key = settings.MAILGUN_API_KEY
-	list_domain = settings.LIST_DOMAIN
-	# strip the initial slash
-	forward_url = os.path.join(list_domain, path)
-	forward_url = "https://" + forward_url
-	print forward_url
-	print list_domain
-	expression = "match_recipient('%s')" % route_pattern
-	print expression
-	forward_url = "forward('%s')" % forward_url
-	print forward_url
-	return requests.post( "https://api.mailgun.net/v2/routes",
-			auth=("api", mailgun_api_key),
-			data={"priority": 1,
-				"description": route_name,
-				# the route pattern is a string but still needs to be quoted
-				"expression": expression,
-				"action": forward_url,
-			}
-	)
-
-def create_event_email(sender, instance, created, using, **kwargs):
-	if created == True:
-		# XXX TODO should probably hash the ID or name of the event so we're
-		# not info leaking here, if we care?
-		route_pattern = "event%d" % instance.id
-		route_name = 'Event %d' % instance.id
-		path = "events/message/"
-		resp = create_route(route_name, route_pattern, path)
-		print resp.text
-post_save.connect(create_event_email, sender=Event)
-
 class EventNotifications(models.Model):
 	user = models.OneToOneField(User, related_name='event_notifications')
 	# send reminders on day-of the event?
@@ -206,7 +169,6 @@ class EventNotifications(models.Model):
 
 	class Meta:
 		app_label = 'gather'
-
 
 User.event_notifications = property(lambda u: EventNotifications.objects.get_or_create(user=u)[0])
 

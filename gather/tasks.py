@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from celery.task.schedules import crontab
+from django.core import urlresolvers
 from celery.task import periodic_task
 from celery import shared_task
 from gather.models import Event, EventNotifications
@@ -15,6 +16,7 @@ from django.core.mail import EmailMultiAlternatives
 import requests, pytz, datetime
 from django.db.models import Q
 from itertools import chain
+import emails
 
 from django.db.models.loading import get_model
 Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
@@ -29,10 +31,8 @@ weekday_number_to_name = {
 	6: "Sunday"
 }
 
-
 def send_events_list(user, event_list, location):
-	domain = 'https://'+Site.objects.get_current().domain
-	profile_url = domain + '/people/%s/' % user.username
+	profile_url = urlresolvers.reverse('user_detail', args=(user.username))
 	footer = 'You are receiving this email because your preferences for event reminders are on. To turn them off, visit %s' % profile_url
 	sender = location.from_email()
 	subject = '[' + location.email_subject_prefix + ']' + 'Reminder of your events today'
@@ -50,22 +50,16 @@ def send_events_list(user, event_list, location):
 			"day_of_week": day_of_week
 			})
 	text_content = plaintext.render(c)
-	list_domain = settings.LIST_DOMAIN
-
-	resp = requests.post("https://api.mailgun.net/v2/%s/messages" % list_domain,
-		auth=("api", settings.MAILGUN_API_KEY),
-		data={
+	mailgun_data={
 			"from": sender,
 			"to": user.email,
 			"subject": subject,
 			"text": text_content,
 		}
-	)
-	print resp.text
+	return emails.mailgun_send(mailgun_data)
 
 def weekly_reminder_email(user, event_list, location):
-	domain = 'https://'+Site.objects.get_current().domain
-	profile_url = domain + '/people/%s/' % user.username
+	profile_url = urlresolvers.reverse('user_detail', args=(user.username))
 	location_name = location.name
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
@@ -78,7 +72,7 @@ def weekly_reminder_email(user, event_list, location):
 	today_local = timezone.now().astimezone(current_tz).date()
 	plaintext = get_template('emails/events_this_week.txt')
 	htmltext = get_template('emails/events_this_week.html')
-	
+
 	c_text = Context({
 			'user': user,
 			'events': event_list,
@@ -101,18 +95,14 @@ def weekly_reminder_email(user, event_list, location):
 			})
 	html_content = htmltext.render(c_html)
 
-	list_domain = settings.LIST_DOMAIN
-	resp = requests.post("https://api.mailgun.net/v2/%s/messages" % list_domain,
-		auth=("api", settings.MAILGUN_API_KEY),
-		data={
+	mailgun_data={
 			"from": sender,
 			"to": user.email,
 			"subject": subject,
 			"text": text_content,
 			"html": html_content,
 		}
-	)
-	print resp.text
+	return email.mailgun_send(mailgun_data)
 
 def events_pending(location):
 	# events seeking feeddback and waiting for review
@@ -176,7 +166,6 @@ def published_events_today_local(location):
 @shared_task
 @periodic_task(run_every=crontab(hour=4, minute=35))
 def events_today_reminder(location):
-	
 	events_today_local = published_events_today_local(location)
 	if len(events_today_local) == 0:
 		print 'no events today!'

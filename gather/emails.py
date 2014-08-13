@@ -86,6 +86,42 @@ def event_published_notification(event, location):
 	}
 	return mailgun_send(mailgun_data)
 
+###############################################
+########### Email Route Create ################
+
+def create_route(route_name, route_pattern, path):
+	mailgun_api_key = settings.MAILGUN_API_KEY
+	list_domain = settings.LIST_DOMAIN
+	# strip the initial slash
+	forward_url = os.path.join(list_domain, path)
+	forward_url = "https://" + forward_url
+	print forward_url
+	print list_domain
+	expression = "match_recipient('%s')" % route_pattern
+	print expression
+	forward_url = "forward('%s')" % forward_url
+	print forward_url
+	return requests.post( "https://api.mailgun.net/v2/routes",
+			auth=("api", mailgun_api_key),
+			data={"priority": 1,
+				"description": route_name,
+				# the route pattern is a string but still needs to be quoted
+				"expression": expression,
+				"action": forward_url,
+			}
+	)
+
+def create_event_email(sender, instance, created, using, **kwargs):
+	if created == True:
+		# XXX TODO should probably hash the ID or name of the event so we're
+		# not info leaking here, if we care?
+		route_pattern = "event%d" % instance.id
+		route_name = 'Event %d' % instance.id
+		path = "events/message/"
+		resp = create_route(route_name, route_pattern, path)
+		print resp.text
+post_save.connect(create_event_email, sender=Event)
+
 ############################################
 ########### EMAIL ENDPOINTS ################
 
