@@ -144,9 +144,14 @@ def event_message(request, location_slug=None):
 	# we know that the route is always in the form eventXX, where XX is the
 	# event id.
 	alias = recipient.split('@')[0]
-	event_id = int(alias[5:])
-	logger.debug("event_message: event_id=%s" % event_id)
-	event = Event.objects.get(id=event_id)
+	logger.debug("event_message: alias=%s" % alias)
+	event = None
+	try:
+		event_id = int(alias[5:])
+		logger.debug("event_message: event_id=%s" % event_id)
+		event = Event.objects.get(id=event_id)
+	except:
+		pass
 	if not event:
 		logger.warn("Event (%s) not found.  Exiting quietly." % event_id)
 		return HttpResponse(status=200)
