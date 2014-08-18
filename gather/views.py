@@ -97,11 +97,7 @@ def create_event(request, location_slug=None):
 			new_event_notification(event, location)
 
 			messages.add_message(request, messages.INFO, 'The event has been created.')
-			try:
-				resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
-			except:
-				resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
-			return resp
+			return HttpResponseRedirect(reverse('gather_view_event', args=(event.location.slug, event.id, event.slug)))
 		else:
 			print "form error"
 			print form.errors
@@ -130,11 +126,7 @@ def edit_event(request, event_id, event_slug, location_slug=None):
 			event.organizers.add(*co_organizers)
 			event.save()
 			messages.add_message(request, messages.INFO, 'The event has been saved.')
-			try:
-				resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
-			except:
-				resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
-			return resp
+			return HttpResponseRedirect(reverse('gather_view_event', args=(event.location.slug, event.id, event.slug)))
 		else:
 			print "form error"
 			print form.errors
@@ -166,11 +158,7 @@ def view_event(request, event_id, event_slug, location_slug=None):
 		# there's some tomfoolery here since we don't know for sure if the app
 		# is being used in a project that specifies the location as part of the
 		# url. probably a better way to do this...
-		try:
-			resp = HttpResponseRedirect(reverse('gather_view_event', args=(location_slug, event.id, event.slug)))
-		except:
-			resp = HttpResponseRedirect(reverse('gather_view_event', args=(event.id, event.slug)))
-		return resp
+		return HttpResponseRedirect(reverse('gather_view_event', args=(event.location.slug, event.id, event.slug)))
 
 	# is the event in the past?
 	today = timezone.now()
