@@ -194,7 +194,7 @@ def view_event(request, event_id, event_slug, location_slug=None):
 		num_attendees = len(event.attendees.all())
 		# only meaningful if event.limit > 0
 		spots_remaining = event.limit - num_attendees
-		event_email = 'event%d@%s.%s' % (event.id, event.location.stub, settings.LIST_DOMAIN)
+		event_email = 'event%d@%s.%s' % (event.id, event.location.slug, settings.LIST_DOMAIN)
 		domain = Site.objects.get_current().domain
 		return render(request, 'gather_event_view.html', {'event': event, 'current_user': current_user, 
 			'user_is_organizer': user_is_organizer, 'new_user_form': new_user_form, "event_email": event_email, "domain": domain,
