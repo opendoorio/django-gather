@@ -37,9 +37,8 @@ def new_event_notification(event, location):
 	plaintext = get_template('emails/new_event_notify.txt')
 	c = Context({
 		'event': event,
-		'creator': event.creator,
 		'location': location,
-		'location_name': location.name,
+		'domain' : Site.objects.get_current().domain,
 	})
 	body_plain = plaintext.render(c)
 	mailgun_data={"from": from_address,
