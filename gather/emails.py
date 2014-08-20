@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 def mailgun_send(mailgun_data):
 	logger.debug("Mailgun send: %s" % mailgun_data)
 	if settings.DEBUG:
-		# When this is true you will see this message in the mailgun logs but
-		# nothing will actually be delivered
-		mailgun_data["o:testmode"] = "yes"
+		if not hasattr(settings, 'MAILGUN_DEBUG') or settings.MAILGUN_DEBUG:
+			# We will see this message in the mailgun logs but nothing will actually be delivered
+			logger.debug("mailgun_send: setting testmode=yes")
+			mailgun_data["o:testmode"] = "yes"
 	resp = requests.post("https://api.mailgun.net/v2/%s/messages" % settings.LIST_DOMAIN,
 		auth=("api", settings.MAILGUN_API_KEY),
 		data=mailgun_data
