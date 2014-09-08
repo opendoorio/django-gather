@@ -513,7 +513,7 @@ def event_publish(request, event_id, event_slug, location_slug=None):
 	# notify the event organizers and admins
 	event_published_notification(event, location)
 
-	return render(request, "snippets/event_status_area.html", {'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
+	return render(request, "snippets/event_status_area.html", {'location':location, 'event': event, 'user_is_organizer': user_is_organizer, 'user_is_event_admin': user_is_event_admin})
 
 def new_user_email_signup(request, location_slug=None):
 	if not request.method == 'POST':
