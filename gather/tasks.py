@@ -19,7 +19,6 @@ from itertools import chain
 import gather.emails
 
 from django.db.models.loading import get_model
-Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
 
 weekday_number_to_name = {
 	0: "Monday",
@@ -165,29 +164,33 @@ def published_events_today_local(location):
 
 @shared_task
 @periodic_task(run_every=crontab(hour=4, minute=35))
-def events_today_reminder(location):
-	events_today_local = published_events_today_local(location)
-	if len(events_today_local) == 0:
-		print 'no events today!'
-		return
-	# for each event, 
-	#	for each attendee or organizer
-	#		if they want reminders, append this event to a list of reminders for today, for that person. 
-	reminders_per_person = {}
-	for event in events_today_local:
-		distinct_event_people = list(set(list(event.attendees.all()) + list(event.organizers.all())))
-		for user in distinct_event_people:
-			if user.event_notifications.reminders == True and user not in reminders_per_person.keys():
-				reminders_this_person = reminders_per_person.get(user, [])
-				reminders_this_person.append(event)
-				reminders_per_person[user] = reminders_this_person
-	
-	for user, events_today in reminders_per_person.iteritems():
-		send_events_list(user, events_today, location)
+def events_today_reminder():
+	Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
+	locations = Location.objects.all()
+	for location in locations:
+		events_today_local = published_events_today_local(location)
+		if len(events_today_local) == 0:
+			print 'no events today!'
+			return
+		# for each event, 
+		#	for each attendee or organizer
+		#		if they want reminders, append this event to a list of reminders for today, for that person. 
+		reminders_per_person = {}
+		for event in events_today_local:
+			distinct_event_people = list(set(list(event.attendees.all()) + list(event.organizers.all())))
+			for user in distinct_event_people:
+				if user.event_notifications.reminders == True and user not in reminders_per_person.keys():
+					reminders_this_person = reminders_per_person.get(user, [])
+					reminders_this_person.append(event)
+					reminders_per_person[user] = reminders_this_person
+		
+		for user, events_today in reminders_per_person.iteritems():
+			send_events_list(user, events_today, location)
 	
 @shared_task
 @periodic_task(run_every=crontab(day_of_week='sun', hour=4, minute=30))
 def weekly_upcoming_events():
+	Location = get_model(*settings.LOCATION_MODEL.split(".", 1))
 	# gets a list of events to send reminders about *for all locations* one by one. 
 	locations = Location.objects.all()
 	for location in locations:
