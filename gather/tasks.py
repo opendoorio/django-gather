@@ -16,7 +16,7 @@ from django.core.mail import EmailMultiAlternatives
 import requests, pytz, datetime
 from django.db.models import Q
 from itertools import chain
-import gather.emails
+from gather import emails
 
 from django.db.models.loading import get_model
 
@@ -31,7 +31,7 @@ weekday_number_to_name = {
 }
 
 def send_events_list(user, event_list, location):
-	profile_url = urlresolvers.reverse('user_detail', args=(user.username))
+	profile_url = urlresolvers.reverse('user_detail', args=(user.username, ))
 	footer = 'You are receiving this email because your preferences for event reminders are on. To turn them off, visit %s' % profile_url
 	sender = location.from_email()
 	subject = '[' + location.email_subject_prefix + ']' + 'Reminder of your events today'
@@ -39,6 +39,7 @@ def send_events_list(user, event_list, location):
 	today_local = timezone.now().astimezone(current_tz).date()
 	day_of_week = weekday_number_to_name[today_local.weekday()]
 	plaintext = get_template('emails/events_today.txt')
+	domain = Site.objects.get_current().domain
 	c = Context({
 			'user': user,
 			'events': event_list,
@@ -58,7 +59,7 @@ def send_events_list(user, event_list, location):
 	return emails.mailgun_send(mailgun_data)
 
 def weekly_reminder_email(user, event_list, location):
-	profile_url = urlresolvers.reverse('user_detail', args=(user.username))
+	profile_url = urlresolvers.reverse('user_detail', args=(user.username, ))
 	location_name = location.name
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
@@ -71,6 +72,7 @@ def weekly_reminder_email(user, event_list, location):
 	today_local = timezone.now().astimezone(current_tz).date()
 	plaintext = get_template('emails/events_this_week.txt')
 	htmltext = get_template('emails/events_this_week.html')
+	domain = Site.objects.get_current().domain
 
 	c_text = Context({
 			'user': user,
@@ -101,7 +103,7 @@ def weekly_reminder_email(user, event_list, location):
 			"text": text_content,
 			"html": html_content,
 		}
-	return email.mailgun_send(mailgun_data)
+	return emails.mailgun_send(mailgun_data)
 
 def events_pending(location):
 	# events seeking feeddback and waiting for review
@@ -170,8 +172,7 @@ def events_today_reminder():
 	for location in locations:
 		events_today_local = published_events_today_local(location)
 		if len(events_today_local) == 0:
-			print 'no events today!'
-			return
+			continue
 		# for each event, 
 		#	for each attendee or organizer
 		#		if they want reminders, append this event to a list of reminders for today, for that person. 
@@ -198,15 +199,12 @@ def weekly_upcoming_events():
 		if len(events_this_week_at_location) == 0:
 			print 'no events this week at %s; skipping email notification' % location.name
 			continue
-		print events_this_week_at_location
 		# for each event, 
 		#	for each attendee or organizer
 		#		if they want reminders, append this event to a list of reminders for today, for that person. 
 		weekly_notifications_on = EventNotifications.objects.filter(location_weekly = location)
-		print weekly_notifications_on
 		remindees_for_location = [notify.user for notify in weekly_notifications_on]
 		
-		print remindees_for_location
 		for user in remindees_for_location:
 			weekly_reminder_email(user, events_this_week_at_location, location)
 
