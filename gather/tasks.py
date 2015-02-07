@@ -34,7 +34,7 @@ def send_events_list(user, event_list, location):
 	profile_url = urlresolvers.reverse('user_detail', args=(user.username, ))
 	footer = 'You are receiving this email because your preferences for event reminders are on. To turn them off, visit %s' % profile_url
 	sender = location.from_email()
-	subject = '[' + location.email_subject_prefix + ']' + 'Reminder of your events today'
+	subject = '[' + location.email_subject_prefix + ']' + ' Reminder of your events today'
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
 	day_of_week = weekday_number_to_name[today_local.weekday()]
@@ -67,7 +67,7 @@ def weekly_reminder_email(user, event_list, location):
 	week_name = tomorrow_local.strftime("%B %d, %Y")
 	footer = 'You are receiving this email because you requested weekly updates of upcoming events from %s. To turn them off, visit %s' % (location_name, profile_url)
 	sender = location.from_email()
-	subject = '[' + location.email_subject_prefix + ']' + 'Upcoming events for the week of %s' % week_name
+	subject = '[' + location.email_subject_prefix + ']' + ' Upcoming events for the week of %s' % week_name
 	current_tz = timezone.get_current_timezone()
 	today_local = timezone.now().astimezone(current_tz).date()
 	plaintext = get_template('emails/events_this_week.txt')
